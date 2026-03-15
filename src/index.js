@@ -50,7 +50,7 @@ const createWindow = () => {
     mainWindow.loadFile(path.join(__dirname, startFilename));
 
   // Open the DevTools.
-    //mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
 
     if (process.platform === 'win32') {
         app.setAppUserModelId('Quantum Coin Wallet');
@@ -572,6 +572,156 @@ ipcMain.handle('SwapQuoteGetSwapContractData', async (event, data) => {
         return { success: true, dataHex, toAddress: SWAP_ROUTER_V2_CONTRACT_ADDRESS, valueHex, error: null };
     } catch (err) {
         return { success: false, dataHex: null, toAddress: null, valueHex: null, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+ipcMain.handle('SwapSubmitApproval', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, Wallet, parseUnits, getAddress } = require("quantumcoin");
+        const { IERC20 } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, txHash: null, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, txHash: null, error: "Invalid chain ID" };
+        if (!data.privateKey || !data.publicKey) return { success: false, txHash: null, error: "Wallet keys required" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const privBytes = Buffer.from(data.privateKey, "base64");
+        const pubBytes = Buffer.from(data.publicKey, "base64");
+        const wallet = Wallet.fromKeys(privBytes, pubBytes, provider);
+
+        const tokenAddr = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const decimals = typeof data.fromDecimals === "number" ? data.fromDecimals : 18;
+        const amountWei = parseUnits(normalizeAmountString(data.amount), decimals);
+        const gasLimit = Number(data.gasLimit) || 84000;
+
+        const token = IERC20.connect(getAddress(tokenAddr), wallet);
+        const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), amountWei, { gasLimit });
+        return { success: true, txHash: tx.hash, error: null };
+    } catch (err) {
+        return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+ipcMain.handle('SwapSubmitSwap', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, Wallet, parseUnits, getAddress } = require("quantumcoin");
+        const { QuantumSwapV2Router02 } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, txHash: null, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, txHash: null, error: "Invalid chain ID" };
+        const recipientAddress = data.recipientAddress;
+        if (!recipientAddress) return { success: false, txHash: null, error: "Recipient address required" };
+        if (!data.privateKey || !data.publicKey) return { success: false, txHash: null, error: "Wallet keys required" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const privBytes = Buffer.from(data.privateKey, "base64");
+        const pubBytes = Buffer.from(data.publicKey, "base64");
+        const wallet = Wallet.fromKeys(privBytes, pubBytes, provider);
+
+        const router = QuantumSwapV2Router02.connect(SWAP_ROUTER_V2_CONTRACT_ADDRESS, wallet);
+        const fromAddr = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const toAddr = data.toTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.toTokenValue;
+        const path = [getAddress(fromAddr), getAddress(toAddr)];
+        const fromDecimals = typeof data.fromDecimals === "number" ? data.fromDecimals : 18;
+        const toDecimals = typeof data.toDecimals === "number" ? data.toDecimals : 18;
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200);
+        const lastChanged = data.lastChanged === "to" ? "to" : "from";
+        const slippagePercent = Math.max(0, Math.min(100, Number(data.slippagePercent) || 1));
+        const gasLimit = Number(data.gasLimit) || 200000;
+
+        let amountInWei;
+        let amountOutMinWei;
+        if (lastChanged === "to") {
+            const amountOutWei = parseUnits(String(data.amountOut), toDecimals);
+            const amountsIn = await router.getAmountsIn(amountOutWei, path);
+            amountInWei = Array.isArray(amountsIn) ? amountsIn[0] : amountsIn;
+            amountOutMinWei = (amountOutWei * BigInt(100 - slippagePercent)) / 100n;
+        } else {
+            amountInWei = parseUnits(String(data.amountIn), fromDecimals);
+            const amountsOut = await router.getAmountsOut(amountInWei, path);
+            const expectedAmountOutWei = Array.isArray(amountsOut) ? amountsOut[amountsOut.length - 1] : amountsOut;
+            amountOutMinWei = (expectedAmountOutWei * BigInt(100 - slippagePercent)) / 100n;
+        }
+
+        const tx = await router.swapExactTokensForTokens(
+            amountInWei,
+            amountOutMinWei,
+            path,
+            getAddress(recipientAddress),
+            deadline,
+            { gasLimit }
+        );
+        return { success: true, txHash: tx.hash, error: null };
+    } catch (err) {
+        return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+ipcMain.handle('SwapSubmitRemoveAllowance', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, Wallet, getAddress } = require("quantumcoin");
+        const { IERC20 } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, txHash: null, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, txHash: null, error: "Invalid chain ID" };
+        if (!data.privateKey || !data.publicKey) return { success: false, txHash: null, error: "Wallet keys required" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const privBytes = Buffer.from(data.privateKey, "base64");
+        const pubBytes = Buffer.from(data.publicKey, "base64");
+        const wallet = Wallet.fromKeys(privBytes, pubBytes, provider);
+
+        const tokenAddr = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const gasLimit = Number(data.gasLimit) || 84000;
+
+        const token = IERC20.connect(getAddress(tokenAddr), wallet);
+        const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), 0n, { gasLimit });
+        return { success: true, txHash: tx.hash, error: null };
+    } catch (err) {
+        return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+ipcMain.handle('SwapSubmitAddAllowance', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, Wallet, parseUnits, getAddress } = require("quantumcoin");
+        const { IERC20 } = require("quantumswap");
+
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, txHash: null, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, txHash: null, error: "Invalid chain ID" };
+        if (!data.privateKey || !data.publicKey) return { success: false, txHash: null, error: "Wallet keys required" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const privBytes = Buffer.from(data.privateKey, "base64");
+        const pubBytes = Buffer.from(data.publicKey, "base64");
+        const wallet = Wallet.fromKeys(privBytes, pubBytes, provider);
+
+        const tokenAddr = data.fromTokenValue === "Q" ? SWAP_WQ_CONTRACT_ADDRESS : data.fromTokenValue;
+        const decimals = typeof data.fromDecimals === "number" ? data.fromDecimals : 18;
+        const amountWei = parseUnits(normalizeAmountString(data.amount), decimals);
+        const gasLimit = Number(data.gasLimit) || 84000;
+
+        const token = IERC20.connect(getAddress(tokenAddr), wallet);
+        const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), amountWei, { gasLimit });
+        return { success: true, txHash: tx.hash, error: null };
+    } catch (err) {
+        return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
     }
 });
 

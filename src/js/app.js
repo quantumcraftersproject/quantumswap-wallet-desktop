@@ -1651,12 +1651,15 @@ function getSwapDropdownDisplayText(tokenName, tokenSymbol, contractAddress) {
 
 function getSwapTokenListFromWallet() {
     var list = [];
-    list.push({ value: "Q", displayText: QuantumCoin + " (Q)" });
+    if (SWAP_SHOW_NATIVE_COIN) {
+        list.push({ value: "Q", displayText: QuantumCoin + " (Q)" });
+    }
     if (currentWalletTokenList != null && currentWalletTokenList.length > 0) {
         for (var i = 0; i < currentWalletTokenList.length; i++) {
             var t = currentWalletTokenList[i];
             if (!t.symbol || !t.name || !t.contractAddress) continue;
             if (htmlEncode(t.name) !== t.name || htmlEncode(t.symbol) !== t.symbol) continue;
+            if (!SWAP_SHOW_NATIVE_COIN && typeof HEISEN_CONTRACT_ADDRESS !== "undefined" && (t.contractAddress || "").toLowerCase() === (HEISEN_CONTRACT_ADDRESS || "").toLowerCase()) continue;
             list.push({
                 value: t.contractAddress,
                 displayText: getSwapDropdownDisplayText(t.name, t.symbol, t.contractAddress)
@@ -1930,6 +1933,7 @@ function openSwapScreen() {
 
 var SWAP_GAS_FEE_RATE = 1000 / 21000;
 var SWAP_GAS_HIGH_THRESHOLD = 300000;
+var SWAP_SHOW_NATIVE_COIN = false;
 
 function setSwapConfirmPanelLoading(show) {
     var loadingEl = document.getElementById("divSwapConfirmLoading");
@@ -2289,67 +2293,25 @@ async function reloadSwapApprovalContext() {
 async function submitSwapApprovalTransaction(quantumWallet) {
     var fromValue = document.getElementById("ddlSwapFromToken").value;
     var approvalAmount = (document.getElementById("txtSwapApprovalQuantity").value || "").trim();
-    var gasLimitEl = document.getElementById("txtSwapGasLimit");
-    var gas = parseInt(gasLimitEl.value, 10) || 84000;
+    var gas = parseInt(document.getElementById("txtSwapGasLimit").value, 10) || 84000;
     try {
-        var payload = {
+        var result = await submitSwapApproval({
             rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
             chainId: parseInt(currentBlockchainNetwork.networkId, 10),
             fromTokenValue: fromValue,
             amount: approvalAmount,
-            fromDecimals: getSwapTokenDecimals(fromValue)
-        };
-        var dataResult = await getSwapApproveContractData(payload);
-        if (!dataResult || !dataResult.success || !dataResult.dataHex || !dataResult.tokenAddress) {
+            fromDecimals: getSwapTokenDecimals(fromValue),
+            privateKey: quantumWallet.getPrivateKey(),
+            publicKey: quantumWallet.getPublicKey(),
+            gasLimit: gas
+        });
+        if (!result || !result.success || !result.txHash) {
             setSwapConfirmPanelWaitingForApprovalTx(false);
             var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode((dataResult && dataResult.error) ? String(dataResult.error) : (langJson.errors.failedToBuildApprovalTransaction || "Failed to build approval transaction.")); errPanel.style.display = "block"; }
+            if (errPanel) { errPanel.textContent = htmlEncode((result && result.error) ? String(result.error) : (langJson.errors.transactionSubmissionFailed || "Transaction submission failed.")); errPanel.style.display = "block"; }
             return;
         }
-        var sendData = hexToBytes(dataResult.dataHex);
-        var tokenAddress = dataResult.tokenAddress;
-        var coinQuantity = "0";
-        var chainId = currentBlockchainNetwork.networkId;
-        var accountDetails = await getAccountDetails(currentBlockchainNetwork.scanApiDomain, currentWalletAddress);
-        var nonce = accountDetails.nonce;
-
-        var txSigningHash = transactionGetSigningHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData);
-        if (!txSigningHash) {
-            setSwapConfirmPanelWaitingForApprovalTx(false);
-            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
-            return;
-        }
-        var quantumSig = walletSign(quantumWallet, txSigningHash);
-        var verifyResult = cryptoVerify(txSigningHash, quantumSig, base64ToBytes(quantumWallet.getPublicKey()));
-        if (!verifyResult) {
-            setSwapConfirmPanelWaitingForApprovalTx(false);
-            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.signatureVerificationFailed || "Signature verification failed."); errPanel.style.display = "block"; }
-            return;
-        }
-        var txHashHex = transactionGetTransactionHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (!txHashHex) {
-            setSwapConfirmPanelWaitingForApprovalTx(false);
-            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
-            return;
-        }
-        var txData = transactionGetData(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (!txData) {
-            setSwapConfirmPanelWaitingForApprovalTx(false);
-            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
-            return;
-        }
-        var result = await postTransaction(currentBlockchainNetwork.txnApiDomain, txData);
-        if (result !== true) {
-            setSwapConfirmPanelWaitingForApprovalTx(false);
-            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.transactionSubmissionFailed || langJson.errors.invalidApiResponse || "Transaction submission failed."); errPanel.style.display = "block"; }
-            return;
-        }
-        swapApprovalLastTxHash = txHashHex;
+        swapApprovalLastTxHash = result.txHash;
         swapApprovalPollingId = setInterval(pollSwapApprovalTransactionStatus, 9000);
     } catch (err) {
         setSwapConfirmPanelWaitingForApprovalTx(false);
@@ -2364,10 +2326,9 @@ async function submitSwapTransaction(quantumWallet) {
     var fromQty = (document.getElementById("txtSwapFromQuantity").value || "").trim();
     var toQty = (document.getElementById("txtSwapToQuantity").value || "").trim();
     var slippagePercent = parseFloat(document.getElementById("txtSwapSlippage").value) || 1;
-    var gasLimitEl = document.getElementById("txtSwapGasLimit");
-    var gas = parseInt(gasLimitEl.value, 10) || 200000;
+    var gas = parseInt(document.getElementById("txtSwapGasLimit").value, 10) || 200000;
     try {
-        var payload = {
+        var result = await submitSwapSwap({
             rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
             chainId: parseInt(currentBlockchainNetwork.networkId, 10),
             fromTokenValue: fromValue,
@@ -2378,60 +2339,19 @@ async function submitSwapTransaction(quantumWallet) {
             slippagePercent: slippagePercent,
             fromDecimals: getSwapTokenDecimals(fromValue),
             toDecimals: getSwapTokenDecimals(toValue),
-            recipientAddress: currentWalletAddress
-        };
-        var dataResult = await getSwapSwapContractData(payload);
-        if (!dataResult || !dataResult.success || !dataResult.dataHex || !dataResult.toAddress) {
+            recipientAddress: currentWalletAddress,
+            privateKey: quantumWallet.getPrivateKey(),
+            publicKey: quantumWallet.getPublicKey(),
+            gasLimit: gas
+        });
+        if (!result || !result.success || !result.txHash) {
             setSwapConfirmPanelWaitingForApprovalTx(false);
             var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode((dataResult && dataResult.error) ? String(dataResult.error) : (langJson.errors.transactionSubmissionFailed || "Failed to build swap transaction.")); errPanel.style.display = "block"; }
-            return;
-        }
-        var sendData = hexToBytes(dataResult.dataHex);
-        var toAddress = dataResult.toAddress;
-        var coinQuantity = (dataResult.valueHex != null && dataResult.valueHex !== "0x0") ? String(parseInt(dataResult.valueHex, 16)) : "0";
-        var chainId = currentBlockchainNetwork.networkId;
-        var accountDetails = await getAccountDetails(currentBlockchainNetwork.scanApiDomain, currentWalletAddress);
-        var nonce = accountDetails.nonce;
-
-        var txSigningHash = transactionGetSigningHash(quantumWallet.address, nonce, toAddress, coinQuantity, gas, chainId, sendData);
-        if (!txSigningHash) {
-            setSwapConfirmPanelWaitingForApprovalTx(false);
-            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
-            return;
-        }
-        var quantumSig = walletSign(quantumWallet, txSigningHash);
-        var verifyResult = cryptoVerify(txSigningHash, quantumSig, base64ToBytes(quantumWallet.getPublicKey()));
-        if (!verifyResult) {
-            setSwapConfirmPanelWaitingForApprovalTx(false);
-            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.signatureVerificationFailed || "Signature verification failed."); errPanel.style.display = "block"; }
-            return;
-        }
-        var txHashHex = transactionGetTransactionHash(quantumWallet.address, nonce, toAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (!txHashHex) {
-            setSwapConfirmPanelWaitingForApprovalTx(false);
-            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
-            return;
-        }
-        var txData = transactionGetData(quantumWallet.address, nonce, toAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (!txData) {
-            setSwapConfirmPanelWaitingForApprovalTx(false);
-            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; }
+            if (errPanel) { errPanel.textContent = htmlEncode((result && result.error) ? String(result.error) : (langJson.errors.transactionSubmissionFailed || "Transaction submission failed.")); errPanel.style.display = "block"; }
             return;
         }
         swapSuccessGasLimit = gas;
-        var result = await postTransaction(currentBlockchainNetwork.txnApiDomain, txData);
-        if (result !== true) {
-            setSwapConfirmPanelWaitingForApprovalTx(false);
-            var errPanel = document.getElementById("divSwapConfirmApprovalTxError");
-            if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.transactionSubmissionFailed || langJson.errors.invalidApiResponse || "Transaction submission failed."); errPanel.style.display = "block"; }
-            return;
-        }
-        swapApprovalLastTxHash = txHashHex;
+        swapApprovalLastTxHash = result.txHash;
         swapConfirmTxMode = "swap";
         swapApprovalPollingId = setInterval(pollSwapApprovalTransactionStatus, 9000);
         if (swapApprovalStatusRotateId) clearInterval(swapApprovalStatusRotateId);
@@ -2446,35 +2366,23 @@ async function submitSwapTransaction(quantumWallet) {
 
 async function submitRemoveAllowanceTransaction(quantumWallet) {
     var fromValue = document.getElementById("ddlSwapFromToken").value;
-    var gasLimitEl = document.getElementById("txtRemoveAllowanceGasLimit");
-    var gas = parseInt(gasLimitEl.value, 10) || 84000;
+    var gas = parseInt(document.getElementById("txtRemoveAllowanceGasLimit").value, 10) || 84000;
     try {
-        var payload = { rpcEndpoint: currentBlockchainNetwork.rpcEndpoint, chainId: parseInt(currentBlockchainNetwork.networkId, 10), fromTokenValue: fromValue, amount: "0", fromDecimals: getSwapTokenDecimals(fromValue) };
-        var dataResult = await getSwapApproveContractData(payload);
-        if (!dataResult || !dataResult.success || !dataResult.dataHex || !dataResult.tokenAddress) {
+        var result = await submitSwapRemoveAllowance({
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            fromTokenValue: fromValue,
+            privateKey: quantumWallet.getPrivateKey(),
+            publicKey: quantumWallet.getPublicKey(),
+            gasLimit: gas
+        });
+        if (!result || !result.success || !result.txHash) {
             setRemoveAllowancePanelWaiting(false);
             var errPanel = document.getElementById("divRemoveAllowanceError");
-            if (errPanel) { errPanel.textContent = htmlEncode((dataResult && dataResult.error) ? String(dataResult.error) : (langJson.errors.failedToBuildApprovalTransaction || "Failed to build approval transaction.")); errPanel.style.display = "block"; }
+            if (errPanel) { errPanel.textContent = htmlEncode((result && result.error) ? String(result.error) : (langJson.errors.transactionSubmissionFailed || "Transaction submission failed.")); errPanel.style.display = "block"; }
             return;
         }
-        var sendData = hexToBytes(dataResult.dataHex);
-        var tokenAddress = dataResult.tokenAddress;
-        var coinQuantity = "0";
-        var chainId = currentBlockchainNetwork.networkId;
-        var accountDetails = await getAccountDetails(currentBlockchainNetwork.scanApiDomain, currentWalletAddress);
-        var nonce = accountDetails.nonce;
-        var txSigningHash = transactionGetSigningHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData);
-        if (!txSigningHash) { setRemoveAllowancePanelWaiting(false); var errPanel = document.getElementById("divRemoveAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
-        var quantumSig = walletSign(quantumWallet, txSigningHash);
-        var verifyResult = cryptoVerify(txSigningHash, quantumSig, base64ToBytes(quantumWallet.getPublicKey()));
-        if (!verifyResult) { setRemoveAllowancePanelWaiting(false); var errPanel = document.getElementById("divRemoveAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.signatureVerificationFailed || "Signature verification failed."); errPanel.style.display = "block"; } return; }
-        var txHashHex = transactionGetTransactionHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (!txHashHex) { setRemoveAllowancePanelWaiting(false); var errPanel = document.getElementById("divRemoveAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
-        var txData = transactionGetData(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (!txData) { setRemoveAllowancePanelWaiting(false); var errPanel = document.getElementById("divRemoveAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
-        var result = await postTransaction(currentBlockchainNetwork.txnApiDomain, txData);
-        if (result !== true) { setRemoveAllowancePanelWaiting(false); var errPanel = document.getElementById("divRemoveAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.transactionSubmissionFailed || langJson.errors.invalidApiResponse || "Transaction submission failed."); errPanel.style.display = "block"; } return; }
-        swapApprovalLastTxHash = txHashHex;
+        swapApprovalLastTxHash = result.txHash;
         allowancePanelMode = "remove";
         swapApprovalPollingId = setInterval(pollSwapApprovalTransactionStatus, 9000);
     } catch (err) {
@@ -2487,8 +2395,7 @@ async function submitRemoveAllowanceTransaction(quantumWallet) {
 async function submitAddAllowanceTransaction(quantumWallet) {
     var fromValue = document.getElementById("ddlSwapFromToken").value;
     var approvalAmount = (document.getElementById("txtAddAllowanceQuantity").value || "").trim();
-    var gasLimitEl = document.getElementById("txtAddAllowanceGasLimit");
-    var gas = parseInt(gasLimitEl.value, 10) || 84000;
+    var gas = parseInt(document.getElementById("txtAddAllowanceGasLimit").value, 10) || 84000;
     if (!approvalAmount || parseFloat(approvalAmount) <= 0) {
         setAddAllowancePanelWaiting(false);
         var errPanel = document.getElementById("divAddAllowanceError");
@@ -2496,32 +2403,23 @@ async function submitAddAllowanceTransaction(quantumWallet) {
         return;
     }
     try {
-        var payload = { rpcEndpoint: currentBlockchainNetwork.rpcEndpoint, chainId: parseInt(currentBlockchainNetwork.networkId, 10), fromTokenValue: fromValue, amount: approvalAmount, fromDecimals: getSwapTokenDecimals(fromValue) };
-        var dataResult = await getSwapApproveContractData(payload);
-        if (!dataResult || !dataResult.success || !dataResult.dataHex || !dataResult.tokenAddress) {
+        var result = await submitSwapAddAllowance({
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            fromTokenValue: fromValue,
+            amount: approvalAmount,
+            fromDecimals: getSwapTokenDecimals(fromValue),
+            privateKey: quantumWallet.getPrivateKey(),
+            publicKey: quantumWallet.getPublicKey(),
+            gasLimit: gas
+        });
+        if (!result || !result.success || !result.txHash) {
             setAddAllowancePanelWaiting(false);
             var errPanel = document.getElementById("divAddAllowanceError");
-            if (errPanel) { errPanel.textContent = htmlEncode((dataResult && dataResult.error) ? String(dataResult.error) : (langJson.errors.failedToBuildApprovalTransaction || "Failed to build approval transaction.")); errPanel.style.display = "block"; }
+            if (errPanel) { errPanel.textContent = htmlEncode((result && result.error) ? String(result.error) : (langJson.errors.transactionSubmissionFailed || "Transaction submission failed.")); errPanel.style.display = "block"; }
             return;
         }
-        var sendData = hexToBytes(dataResult.dataHex);
-        var tokenAddress = dataResult.tokenAddress;
-        var coinQuantity = "0";
-        var chainId = currentBlockchainNetwork.networkId;
-        var accountDetails = await getAccountDetails(currentBlockchainNetwork.scanApiDomain, currentWalletAddress);
-        var nonce = accountDetails.nonce;
-        var txSigningHash = transactionGetSigningHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData);
-        if (!txSigningHash) { setAddAllowancePanelWaiting(false); var errPanel = document.getElementById("divAddAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
-        var quantumSig = walletSign(quantumWallet, txSigningHash);
-        var verifyResult = cryptoVerify(txSigningHash, quantumSig, base64ToBytes(quantumWallet.getPublicKey()));
-        if (!verifyResult) { setAddAllowancePanelWaiting(false); var errPanel = document.getElementById("divAddAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.signatureVerificationFailed || "Signature verification failed."); errPanel.style.display = "block"; } return; }
-        var txHashHex = transactionGetTransactionHash(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (!txHashHex) { setAddAllowancePanelWaiting(false); var errPanel = document.getElementById("divAddAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
-        var txData = transactionGetData(quantumWallet.address, nonce, tokenAddress, coinQuantity, gas, chainId, sendData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (!txData) { setAddAllowancePanelWaiting(false); var errPanel = document.getElementById("divAddAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.unexpectedError || "Unexpected error"); errPanel.style.display = "block"; } return; }
-        var result = await postTransaction(currentBlockchainNetwork.txnApiDomain, txData);
-        if (result !== true) { setAddAllowancePanelWaiting(false); var errPanel = document.getElementById("divAddAllowanceError"); if (errPanel) { errPanel.textContent = htmlEncode(langJson.errors.transactionSubmissionFailed || langJson.errors.invalidApiResponse || "Transaction submission failed."); errPanel.style.display = "block"; } return; }
-        swapApprovalLastTxHash = txHashHex;
+        swapApprovalLastTxHash = result.txHash;
         allowancePanelMode = "add";
         swapApprovalPollingId = setInterval(pollSwapApprovalTransactionStatus, 9000);
     } catch (err) {

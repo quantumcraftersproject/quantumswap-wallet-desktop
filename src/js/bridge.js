@@ -171,3 +171,19 @@ async function getSwapRouterAddress() {
 async function getSwapSwapContractData(payload) {
     return await SwapQuoteApi.send('SwapQuoteGetSwapContractData', payload);
 }
+
+async function submitSwapApproval(payload) {
+    return await SwapQuoteApi.send('SwapSubmitApproval', payload);
+}
+
+async function submitSwapSwap(payload) {
+    return await SwapQuoteApi.send('SwapSubmitSwap', payload);
+}
+
+async function submitSwapRemoveAllowance(payload) {
+    return await SwapQuoteApi.send('SwapSubmitRemoveAllowance', payload);
+}
+
+async function submitSwapAddAllowance(payload) {
+    return await SwapQuoteApi.send('SwapSubmitAddAllowance', payload);
+}
