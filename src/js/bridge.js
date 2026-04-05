@@ -28,60 +28,6 @@ async function getLocalStoragePath() {
     return keyStore;
 }
 
-async function phraseToWalletsEth(phrase) {
-    walletList = await EthersApi.send('EthersApiPhraseToWallets', phrase);
-    return walletList;
-}
-
-async function phraseToKeyPairsEth(phrase) {
-    walletList = await EthersApi.send('EthersApiPhraseToKeyPairs', phrase);
-    return walletList;
-
-}
-
-async function signEthMessageWithPhrase(phrase, index, message) {
-    const signingRequest = {
-        phrase: phrase,
-        index: index,
-        message: message
-    }
-    sig = await EthersApi.send('EthersApiSignMessageWithPhrase', signingRequest);
-    return sig;
-}
-
-async function verifyEthSignature(message, signature, address) {
-    const verifyRequest = {
-        message: message,
-        signature: signature,
-        address: address
-    }
-    let ok = await EthersApi.send('EthersApiVerify', verifyRequest);
-    return ok;
-}
-
-async function walletEthFromKey(privateKey) {
-    wallet = await EthersApi.send('EthersApiWalletFromKey', privateKey);
-    return wallet;
-}
-
-async function signEthMessageWithKey(key, message) {
-    const signingRequest = {
-        key: key,
-        message: message
-    }
-    sig = await EthersApi.send('EthersApiSignMessageWithKey', signingRequest);
-    return sig;
-}
-
-async function keyStoreAccountEthFromJson(json, password) {
-    const decryptRequest = {
-        json: json,
-        password: password
-    }
-    keyStore = await EthersApi.send('EthersApiKeyStoreAccountFromJson', decryptRequest);
-    return keyStore;
-}
-
 async function weiToEther(wei) {
     let eth = await FormatApi.send('FormatApiWeiToEther', wei);
     return eth

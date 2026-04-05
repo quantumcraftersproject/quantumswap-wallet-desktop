@@ -243,7 +243,6 @@ async function resumePostEula() {
 
     await blockchainNetworksInit();
     await showBlockchainNetworks();
-    initConversion(); //don't have to wait on this
 }
 
 async function showBlockchainNetworks() {
@@ -263,7 +262,6 @@ async function showBlockchainNetworks() {
         networkListString = networkListString + networkString;
         if (index == currentBlockchainNetworkIndex) {
             document.getElementById("spnNetwork").innerHTML = htmlEncode(networkItem.blockchainName) + DROPDOWN_TEXT;
-            document.getElementById("divConversionNetwork").textContent = networkItem.blockchainName;
             document.getElementById("lblNetworkConfirm").textContent = networkItem.blockchainName;
             currentBlockchainNetwork = networkItem;
         }
@@ -1151,8 +1149,6 @@ function showSettingsScreen() {
     document.getElementById('WalletsScreen').style.display = "none";
     document.getElementById('revealSeedScreen').style.display = "none";
     document.getElementById('backupSpecificWalletScreen').style.display = "none";
-    document.getElementById('getCoins1').style.display = "none";
-    document.getElementById('OfflineSignConversionScreen').style.display = "none";
     document.getElementById('networkListScreen').style.display = "none";
     document.getElementById('divNetworkDropdown').style.display = 'none';
     document.getElementById('ValidatorScreen').style.display = "none";

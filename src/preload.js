@@ -27,11 +27,6 @@ contextBridge.exposeInMainWorld('FileApi', {
     handle: (channel, callable, event, data) => ipcRenderer.on(channel, callable(event, data))
 })
 
-contextBridge.exposeInMainWorld('EthersApi', {
-    send: (channel, data) => ipcRenderer.invoke(channel, data),
-    handle: (channel, callable, event, data) => ipcRenderer.on(channel, callable(event, data))
-})
-
 contextBridge.exposeInMainWorld('LocalStorageApi', {
     send: (channel, data) => ipcRenderer.invoke(channel, data),
     handle: (channel, callable, event, data) => ipcRenderer.on(channel, callable(event, data))

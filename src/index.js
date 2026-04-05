@@ -125,67 +125,6 @@ ipcMain.handle('FileApiReadFile', async (event, data) => {
     return fs.readFileSync(filename).toString();
 })
 
-ipcMain.handle('EthersApiPhraseToWallets', async (event, data) => {   
-    const wallestList = [];
-    const mnemonic = ethers.Mnemonic.fromPhrase(data);
-    for (let index = 0; index < 100; index++) {
-        const wallet = ethers.HDNodeWallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/${index}`);
-        wallestList.push(wallet);
-    }
-
-    return wallestList;
-})
-
-ipcMain.handle('EthersApiPhraseToKeyPairs', async (event, data) => {
-    const keyList = [];
-    const mnemonic = ethers.Mnemonic.fromPhrase(data);
-    for (let index = 0; index < 100; index++) {
-        const wallet = ethers.HDNodeWallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/${index}`);
-        const keyPair = {
-            privateKey: wallet.privateKey,
-            publicKey: wallet.publicKey
-        }
-        keyList.push(keyPair);
-    }
-
-    return keyList;
-})
-
-ipcMain.handle('EthersApiSignMessageWithPhrase', async (event, data) => {
-    const mnemonic = ethers.Mnemonic.fromPhrase(data.phrase)
-    const wallet = ethers.HDNodeWallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/${data.index}`);
-    let sig = await wallet.signMessage(data.message);
-    return sig;
-})
-
-ipcMain.handle('EthersApiWalletFromKey', async (event, data) => {
-    let wallet = new ethers.Wallet(data);
-    return wallet;
-})
-
-ipcMain.handle('EthersApiSignMessageWithKey', async (event, data) => {
-    let wallet = new ethers.Wallet(data.key);
-    let sig = await wallet.signMessage(data.message);
-    return sig;
-})
-
-ipcMain.handle('EthersApiKeyStoreAccountFromJson', async (event, data) => {
-    let keyStoreAccount = ethers.decryptKeystoreJsonSync(data.json, data.password);
-    return keyStoreAccount;
-})
-
-ipcMain.handle('EthersApiVerify', async (event, data) => {
-    try {
-        const signerAddr = await ethers.verifyMessage(data.message, data.signature);
-        if (signerAddr.toString().toLowerCase() !== data.address.toString().toLowerCase()) {
-            return false;
-        }
-        return true;
-    } catch (err) {
-        return false;
-    }
-})
-
 function base64ToBytes(base64) {
     const binString = atob(base64);
     return Uint8Array.from(binString, (m) => m.codePointAt(0));
