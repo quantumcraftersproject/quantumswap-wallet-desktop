@@ -86,59 +86,29 @@ async function newDepositSubmit(quantumWallet) {
     let validatorDepositCoins = document.getElementById("txtValidatorDepositCoins").value;
 
     try {
-        //get account balance
-        currentAccountDetails = null;
-        let accountDetails = await getAccountDetails(currentBlockchainNetwork.scanApiDomain, currentWalletAddress);
-        currentAccountDetails = accountDetails;
+        var result = await submitStakingContract({
+            rpcEndpoint: currentBlockchainNetwork.rpcEndpoint,
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            method: "newDeposit",
+            methodArgs: [validatorAddress],
+            value: validatorDepositCoins,
+            gasLimit: NEW_DEPOSIT_GAS,
+            privateKey: quantumWallet.getPrivateKey(),
+            publicKey: quantumWallet.getPublicKey()
+        });
 
-        const gas = NEW_DEPOSIT_GAS;
-        const chainId = currentBlockchainNetwork.networkId;
-        const nonce = accountDetails.nonce;
-        const contractData = getNewDepositContractData(validatorAddress);
-
-        var txSigningHash = transactionGetSigningHash(quantumWallet.address, nonce, STAKING_CONTRACT_ADDRESS, validatorDepositCoins, gas, chainId, contractData)
-        if (txSigningHash == null) {
-            hideWaitingBox();
-            showWarnAlert(langJson.errors.unexpectedError);
-            return;
-        }
-
-        var quantumSig = walletSign(quantumWallet, txSigningHash);
-
-        var verifyResult = cryptoVerify(txSigningHash, quantumSig, base64ToBytes(quantumWallet.getPublicKey()));
-        if (verifyResult == false) {
-            return;
-        }
-
-        var txHashHex = transactionGetTransactionHash(quantumWallet.address, nonce, STAKING_CONTRACT_ADDRESS, validatorDepositCoins, gas, chainId, contractData,
-            base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (txHashHex == null) {
-            hideWaitingBox();
-            showWarnAlert(langJson.errors.unexpectedError);
-            return;
-        }
-
-        //account txn data
-        let currentDate = new Date();
-        var txData = transactionGetData(quantumWallet.address, nonce, STAKING_CONTRACT_ADDRESS, validatorDepositCoins, gas, chainId, contractData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (txData == null) {
-            hideWaitingBox();
-            showWarnAlert(langJson.errors.unexpectedError);
-            return;
-        }
-
-        let result = await postTransaction(currentBlockchainNetwork.txnApiDomain, txData);
-        if (result == true) {
-            let pendingTxn = new TransactionDetails(txHashHex, currentDate, quantumWallet.address, STAKING_CONTRACT_ADDRESS, validatorDepositCoins, true);
+        if (result && result.success && result.txHash) {
+            let currentDate = new Date();
+            let pendingTxn = new TransactionDetails(result.txHash, currentDate, quantumWallet.address, STAKING_CONTRACT_ADDRESS, validatorDepositCoins, true);
             pendingTransactionsMap.set(quantumWallet.address.toLowerCase() + currentBlockchainNetwork.index.toString(), pendingTxn);
 
             setTimeout(() => {
                 hideWaitingBox();
-                showAlertAndExecuteOnClose(langJson.langValues.sendRequest.replace(TRANSACTION_HASH_TEMPLATE, txHashHex), showWalletScreen);
+                showAlertAndExecuteOnClose(langJson.langValues.sendRequest.replace(TRANSACTION_HASH_TEMPLATE, result.txHash), showWalletScreen);
             }, 1000);
         } else {
             hideWaitingBox();
-            showWarnAlert(langJson.errors.invalidApiResponse);
+            showWarnAlert((result && result.error) ? result.error : langJson.errors.invalidApiResponse);
         }
     }
     catch (error) {
@@ -159,45 +129,24 @@ async function newDepositOfflineSign(quantumWallet) {
     let currentNonce = document.getElementById("txtCurrentNonceValidator").value;
 
     try {
-        const gas = NEW_DEPOSIT_GAS;
-        const chainId = currentBlockchainNetwork.networkId;
-        const contractData = getNewDepositContractData(validatorAddress);
-        const nonce = parseInt(currentNonce);
+        var result = await offlineSignStakingContract({
+            chainId: parseInt(currentBlockchainNetwork.networkId, 10),
+            method: "newDeposit",
+            methodArgs: [validatorAddress],
+            value: validatorDepositCoins,
+            gasLimit: NEW_DEPOSIT_GAS,
+            nonce: parseInt(currentNonce),
+            privateKey: quantumWallet.getPrivateKey(),
+            publicKey: quantumWallet.getPublicKey()
+        });
 
-        var txSigningHash = transactionGetSigningHash(quantumWallet.address, nonce, STAKING_CONTRACT_ADDRESS, validatorDepositCoins, gas, chainId, contractData)
-        if (txSigningHash == null) {
+        if (result && result.success && result.txData) {
             hideWaitingBox();
-            showWarnAlert(langJson.errors.unexpectedError);
-            return;
-        }
-
-        var quantumSig = walletSign(quantumWallet, txSigningHash);
-
-        var verifyResult = cryptoVerify(txSigningHash, quantumSig, base64ToBytes(quantumWallet.getPublicKey()));
-        if (verifyResult == false) {
+            await showOfflineSignatureDialog(result.txData);
+        } else {
             hideWaitingBox();
-            showWarnAlert(langJson.errors.unexpectedError);
-            return;
+            showWarnAlert((result && result.error) ? result.error : langJson.errors.unexpectedError);
         }
-
-        var txHashHex = transactionGetTransactionHash(quantumWallet.address, nonce, STAKING_CONTRACT_ADDRESS, validatorDepositCoins, gas, chainId, contractData,
-            base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (txHashHex == null) {
-            hideWaitingBox();
-            showWarnAlert(langJson.errors.unexpectedError);
-            return;
-        }
-
-        //account txn data
-        var txData = transactionGetData(quantumWallet.address, nonce, STAKING_CONTRACT_ADDRESS, validatorDepositCoins, gas, chainId, contractData, base64ToBytes(quantumWallet.getPublicKey()), quantumSig);
-        if (txData == null) {
-            hideWaitingBox();
-            showWarnAlert(langJson.errors.unexpectedError);
-            return;
-        }
-
-        hideWaitingBox();
-        await showOfflineSignatureDialog(txData);
     }
     catch (error) {
         hideWaitingBox();

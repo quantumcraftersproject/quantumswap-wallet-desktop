@@ -50,7 +50,7 @@ const createWindow = () => {
     mainWindow.loadFile(path.join(__dirname, startFilename));
 
   // Open the DevTools.
-    //mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
 
     if (process.platform === 'win32') {
         app.setAppUserModelId('Quantum Coin Wallet');
@@ -789,6 +789,93 @@ ipcMain.handle('OfflineSignTokenTransaction', async (event, data) => {
             nonce: nonce,
             chainId: chainId
         });
+        return { success: true, txData: txData, error: null };
+    } catch (err) {
+        return { success: false, txData: null, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+const STAKING_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000000000000000000000001000";
+const STAKING_ABI_JSON = [{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"depositorAddress","type":"address"},{"indexed":true,"internalType":"address","name":"oldValidatorAddress","type":"address"},{"indexed":true,"internalType":"address","name":"newValidatorAddress","type":"address"}],"name":"OnChangeValidator","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"depositorAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"withdrawalQuantity","type":"uint256"}],"name":"OnCompletePartialWithdrawal","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"depositorAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"netBalance","type":"uint256"}],"name":"OnCompleteWithdrawal","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"depositorAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"oldBalance","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"newBalance","type":"uint256"}],"name":"OnIncreaseDeposit","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"depositorAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"withdrawalBlock","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"withdrawalQuantity","type":"uint256"}],"name":"OnInitiatePartialWithdrawal","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"depositorAddress","type":"address"},{"indexed":true,"internalType":"address","name":"validatorAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"blockNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"blockTime","type":"uint256"}],"name":"OnNewDeposit","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"depositorAddress","type":"address"},{"indexed":false,"internalType":"address","name":"validatorAddress","type":"address"}],"name":"OnPauseValidation","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"depositorAddress","type":"address"},{"indexed":false,"internalType":"address","name":"validatorAddress","type":"address"}],"name":"OnResumeValidation","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"depositorAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardAmount","type":"uint256"}],"name":"OnReward","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"depositorAddress","type":"address"},{"indexed":false,"internalType":"uint256","name":"slashedAmount","type":"uint256"}],"name":"OnSlashing","type":"event"},{"inputs":[{"internalType":"address","name":"depositorAddress","type":"address"},{"internalType":"uint256","name":"rewardAmount","type":"uint256"}],"name":"addDepositorReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"depositorAddress","type":"address"},{"internalType":"uint256","name":"slashAmount","type":"uint256"}],"name":"addDepositorSlashing","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newValidatorAddress","type":"address"}],"name":"changeValidator","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"completePartialWithdrawal","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"completeWithdrawal","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"depositorAddress","type":"address"}],"name":"didDepositorEverExist","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"validatorAddress","type":"address"}],"name":"didValidatorEverExist","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"depositorAddress","type":"address"}],"name":"doesDepositorExist","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"validatorAddress","type":"address"}],"name":"doesValidatorExist","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"depositorAddress","type":"address"}],"name":"getBalanceOfDepositor","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getDepositorCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"validatorAddress","type":"address"}],"name":"getDepositorOfValidator","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"depositorAddress","type":"address"}],"name":"getDepositorRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"depositorAddress","type":"address"}],"name":"getDepositorSlashings","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"depositorAddress","type":"address"}],"name":"getNetBalanceOfDepositor","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"validatorAddress","type":"address"}],"name":"getStakingDetails","outputs":[{"components":[{"internalType":"address","name":"Depositor","type":"address"},{"internalType":"address","name":"Validator","type":"address"},{"internalType":"uint256","name":"Balance","type":"uint256"},{"internalType":"uint256","name":"NetBalance","type":"uint256"},{"internalType":"uint256","name":"BlockRewards","type":"uint256"},{"internalType":"uint256","name":"Slashings","type":"uint256"},{"internalType":"bool","name":"IsValidationPaused","type":"bool"},{"internalType":"uint256","name":"WithdrawalBlock","type":"uint256"},{"internalType":"uint256","name":"WithdrawalAmount","type":"uint256"},{"internalType":"uint256","name":"LastNilBlockNumber","type":"uint256"},{"internalType":"uint256","name":"NilBlockCount","type":"uint256"}],"internalType":"struct IStakingContract.StakingDetails","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getTotalDepositedBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"depositorAddress","type":"address"}],"name":"getValidatorOfDepositor","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"depositorAddress","type":"address"}],"name":"getWithdrawalBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"increaseDeposit","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"initiatePartialWithdrawal","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"validatorAddress","type":"address"}],"name":"isValidationPaused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"listValidators","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"validatorAddress","type":"address"}],"name":"newDeposit","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"pauseValidation","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"validatorAddress","type":"address"}],"name":"resetNilBlock","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"resumeValidation","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"validatorAddress","type":"address"}],"name":"setNilBlock","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+
+const STAKING_ALLOWED_METHODS = ["newDeposit", "increaseDeposit", "initiatePartialWithdrawal", "completePartialWithdrawal", "pauseValidation", "resumeValidation"];
+
+function prepareStakingMethodArgs(abi, method, rawArgs) {
+    const { parseUnits, getAddress } = require("quantumcoin");
+    const fn = abi.find(f => f.type === "function" && f.name === method);
+    if (!fn || !fn.inputs) return rawArgs || [];
+    const args = rawArgs || [];
+    return fn.inputs.map((input, i) => {
+        const val = args[i];
+        if (val == null) return val;
+        if (input.type === "address") return getAddress(val);
+        if (input.type === "uint256") return parseUnits(normalizeAmountString(String(val)), 18);
+        return val;
+    });
+}
+
+ipcMain.handle('StakingContractSubmit', async (event, data) => {
+    try {
+        const { Initialize, Config } = require("quantumcoin/config");
+        const { JsonRpcProvider, Wallet, Contract, parseUnits, getAddress } = require("quantumcoin");
+
+        if (!data.method || !STAKING_ALLOWED_METHODS.includes(data.method)) return { success: false, txHash: null, error: "Invalid staking method" };
+        if (!data.privateKey || !data.publicKey) return { success: false, txHash: null, error: "Wallet keys required" };
+        const rpcUrl = buildSwapRpcUrl(data.rpcEndpoint);
+        if (!rpcUrl) return { success: false, txHash: null, error: "Invalid RPC endpoint" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, txHash: null, error: "Invalid chain ID" };
+
+        await Initialize(new Config(chainId, rpcUrl));
+        const provider = new JsonRpcProvider(rpcUrl, chainId);
+        const privBytes = Buffer.from(data.privateKey, "base64");
+        const pubBytes = Buffer.from(data.publicKey, "base64");
+        const wallet = Wallet.fromKeys(privBytes, pubBytes, provider);
+
+        const contract = new Contract(STAKING_CONTRACT_ADDRESS, STAKING_ABI_JSON, wallet);
+        const methodArgs = prepareStakingMethodArgs(STAKING_ABI_JSON, data.method, data.methodArgs);
+        const gasLimit = Number(data.gasLimit) || 250000;
+        const overrides = { gasLimit };
+        if (data.value && data.value !== "0" && data.value !== "0.0") {
+            overrides.value = parseUnits(normalizeAmountString(data.value), 18);
+        }
+        methodArgs.push(overrides);
+
+        const tx = await contract[data.method](...methodArgs);
+        return { success: true, txHash: tx.hash, error: null };
+    } catch (err) {
+        return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
+    }
+});
+
+ipcMain.handle('StakingContractOfflineSign', async (event, data) => {
+    try {
+        const { Initialize } = require("quantumcoin/config");
+        const { Wallet, Contract, parseUnits, getAddress } = require("quantumcoin");
+
+        if (!data.method || !STAKING_ALLOWED_METHODS.includes(data.method)) return { success: false, txData: null, error: "Invalid staking method" };
+        if (!data.privateKey || !data.publicKey) return { success: false, txData: null, error: "Wallet keys required" };
+        const chainId = Number(data.chainId);
+        if (!Number.isInteger(chainId)) return { success: false, txData: null, error: "Invalid chain ID" };
+        const nonce = Number(data.nonce);
+        if (!Number.isInteger(nonce) || nonce < 0) return { success: false, txData: null, error: "Invalid nonce" };
+
+        await Initialize(null);
+        const privBytes = Buffer.from(data.privateKey, "base64");
+        const pubBytes = Buffer.from(data.publicKey, "base64");
+        const wallet = Wallet.fromKeys(privBytes, pubBytes);
+
+        const contract = new Contract(STAKING_CONTRACT_ADDRESS, STAKING_ABI_JSON, wallet);
+        const methodArgs = prepareStakingMethodArgs(STAKING_ABI_JSON, data.method, data.methodArgs);
+        const gasLimit = Number(data.gasLimit) || 250000;
+        const overrides = { gasLimit };
+        if (data.value && data.value !== "0" && data.value !== "0.0") {
+            overrides.value = parseUnits(normalizeAmountString(data.value), 18);
+        }
+        methodArgs.push(overrides);
+
+        const txReq = await contract.populateTransaction[data.method](...methodArgs);
+        const txData = await wallet.signTransaction({ ...txReq, nonce: nonce, chainId: chainId });
         return { success: true, txData: txData, error: null };
     } catch (err) {
         return { success: false, txData: null, error: (err && err.message) ? err.message : String(err) };
