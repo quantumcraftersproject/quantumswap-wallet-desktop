@@ -34,6 +34,37 @@ const BLOCKCHAIN_TXN_API_DOMAIN_TEMPLATE = "[BLOCKCHAIN_TXN_API_URL]";
 const BLOCKCHAIN_EXPLORER_API_DOMAIN_TEMPLATE = "[BLOCKCHAIN_EXPLORER_API_URL]";
 const BLOCKCHAIN_RPC_ENDPOINT_TEMPLATE = "[BLOCKCHAIN_RPC_ENDPOINT_URL]";
 const TRANSACTION_HASH_TEMPLATE = "[TRANSACTION_HASH]";
+
+/** String.replaceAll() treats $ in replacements specially; split/join is always literal. */
+function replaceTemplateToken(html, token, value) {
+    if (!token) {
+        return html;
+    }
+    return html.split(token).join(value);
+}
+
+/** Replace only the first occurrence so user-supplied scan/txn/explorer text cannot match a later placeholder. */
+function replaceTemplateTokenOnce(html, token, value) {
+    if (!token) {
+        return html;
+    }
+    const idx = html.indexOf(token);
+    if (idx === -1) {
+        return html;
+    }
+    return html.slice(0, idx) + value + html.slice(idx + token.length);
+}
+
+function getBlockchainNetworkRowTemplate() {
+    if (blockchainNetworkRowTemplate && blockchainNetworkRowTemplate.indexOf(BLOCKCHAIN_RPC_ENDPOINT_TEMPLATE) !== -1) {
+        return blockchainNetworkRowTemplate;
+    }
+    var tpl = document.getElementById("tplBlockchainNetworkRow");
+    if (tpl && tpl.innerHTML && tpl.innerHTML.trim().length > 0) {
+        return tpl.innerHTML.trim();
+    }
+    return blockchainNetworkRowTemplate || "";
+}
 const DROPDOWN_TEXT = "&#x25BC;";
 const DEFAULT_OFFLINE_TXN_SIGNING_SETTING_KEY = "DefaultOfflineTxnSigningSettingKey";
 const maxTokenNameLength = 25;
@@ -109,7 +140,13 @@ async function initApp() {
     STORAGE_PATH = await storageGetPath();
     walletListRowTemplate = document.getElementsByClassName("wallet-row")[0].outerHTML;
     blockchainNetworkOptionItemTemplate = document.getElementsByClassName("network-template")[0].outerHTML;
-    blockchainNetworkRowTemplate = document.getElementsByClassName("network-row")[0].outerHTML;
+    var tplNetworkRow = document.getElementById("tplBlockchainNetworkRow");
+    if (tplNetworkRow && tplNetworkRow.innerHTML.trim().length > 0) {
+        blockchainNetworkRowTemplate = tplNetworkRow.innerHTML.trim();
+    } else {
+        var fallbackRow = document.querySelector("#tbodyNetworkRow tr.network-row");
+        blockchainNetworkRowTemplate = fallbackRow ? fallbackRow.outerHTML : "";
+    }
     completedTxnInRowTemplate = document.getElementsByClassName("completed-txn-in-row")[0].outerHTML;    
     completedTxnOutRowTemplate = document.getElementsByClassName("completed-txn-out-row")[0].outerHTML;    
     failedTxnInRowTemplate = document.getElementsByClassName("failed-txn-in-row")[0].outerHTML;    
@@ -229,28 +266,37 @@ async function resumePostEula() {
 async function showBlockchainNetworks() {
     let networkMap = await blockchainNetworksList();
     currentBlockchainNetworkIndex = await blockchainNetworkGetDefaultIndex();
+
+    const sortedKeys = [...networkMap.keys()].sort((a, b) => a[0] - b[0]);
+    if (sortedKeys.length > 0 && !networkMap.has(currentBlockchainNetworkIndex)) {
+        currentBlockchainNetworkIndex = sortedKeys[0];
+        await blockchainNetworkSetDefaultIndex(currentBlockchainNetworkIndex);
+    }
+
     var networkListString = "";
 
     let startTabIndex = 1;
 
-    for (const [index, networkItem] of networkMap.entries()) {
+    const sortedNetworkEntries = [...networkMap.entries()].sort((a, b) => a[0] - b[0]);
+    for (const [index, networkItem] of sortedNetworkEntries) {
         var networkString = blockchainNetworkOptionItemTemplate;
-        networkString = networkString.replaceAll(BLOCKCHAIN_NETWORK_INDEX_TEMPLATE, index.toString());
-        networkString = networkString.replaceAll(BLOCKCHAIN_NETWORK_NAME_TEMPLATE, htmlEncode(networkItem.blockchainName));
-        networkString = networkString.replaceAll(BLOCKCHAIN_NETWORK_ID_TEMPLATE, htmlEncode(networkItem.networkId.toString()));
-        networkString = networkString.replaceAll(TAB_INDEX_TEMPLATE, startTabIndex.toString());
+        networkString = replaceTemplateTokenOnce(networkString, BLOCKCHAIN_NETWORK_INDEX_TEMPLATE, index.toString());
+        networkString = replaceTemplateTokenOnce(networkString, BLOCKCHAIN_NETWORK_NAME_TEMPLATE, htmlEncode(String(networkItem.blockchainName)));
+        networkString = replaceTemplateTokenOnce(networkString, BLOCKCHAIN_NETWORK_ID_TEMPLATE, htmlEncode(String(networkItem.networkId)));
+        networkString = replaceTemplateTokenOnce(networkString, TAB_INDEX_TEMPLATE, startTabIndex.toString());
         startTabIndex = startTabIndex + 1;
         networkListString = networkListString + networkString;
         if (index == currentBlockchainNetworkIndex) {
-            document.getElementById("spnNetwork").innerHTML = htmlEncode(networkItem.blockchainName) + DROPDOWN_TEXT;
-            document.getElementById("lblNetworkConfirm").textContent = networkItem.blockchainName;
+            document.getElementById("spnNetwork").innerHTML = htmlEncode(String(networkItem.blockchainName)) + DROPDOWN_TEXT;
+            document.getElementById("lblNetworkConfirm").textContent = String(networkItem.blockchainName);
             currentBlockchainNetwork = networkItem;
         }
     }
     document.getElementById("divNetworkListDialog").innerHTML = networkListString;
-    let selectedNetworkHtmlId = "optNetwork" + currentBlockchainNetworkIndex.toString();
-    
-    document.getElementById(selectedNetworkHtmlId).checked = true;
+    let selectedNetworkEl = document.getElementById("optNetwork" + currentBlockchainNetworkIndex.toString());
+    if (selectedNetworkEl) {
+        selectedNetworkEl.checked = true;
+    }
 
     document.getElementById("divCancelNetwork").tabIndex = startTabIndex.toString();
     startTabIndex = startTabIndex + 1;    
@@ -261,15 +307,21 @@ async function showBlockchainNetworksTable() {
     let networkMap = await blockchainNetworksList();
     currentBlockchainNetworkIndex = await blockchainNetworkGetDefaultIndex();
     var networkListString = "";
-    for (const [index, networkItem] of networkMap.entries()) {
-        var networkString = blockchainNetworkRowTemplate;
-        networkString = networkString.replaceAll(BLOCKCHAIN_NETWORK_INDEX_TEMPLATE, index.toString());
-        networkString = networkString.replaceAll(BLOCKCHAIN_NETWORK_NAME_TEMPLATE, htmlEncode(networkItem.blockchainName));
-        networkString = networkString.replaceAll(BLOCKCHAIN_NETWORK_ID_TEMPLATE, htmlEncode(networkItem.networkId.toString()));
-        networkString = networkString.replaceAll(BLOCKCHAIN_SCAN_API_DOMAIN_TEMPLATE, htmlEncode(networkItem.scanApiDomain));
-        networkString = networkString.replaceAll(BLOCKCHAIN_TXN_API_DOMAIN_TEMPLATE, htmlEncode(networkItem.txnApiDomain));
-        networkString = networkString.replaceAll(BLOCKCHAIN_EXPLORER_API_DOMAIN_TEMPLATE, htmlEncode(networkItem.blockExplorerDomain));
-        networkString = networkString.replaceAll(BLOCKCHAIN_RPC_ENDPOINT_TEMPLATE, htmlEncode(networkItem.rpcEndpoint));
+    const sortedEntries = [...networkMap.entries()].sort((a, b) => a[0] - b[0]);
+    const rowTpl = getBlockchainNetworkRowTemplate();
+    for (const [index, networkItem] of sortedEntries) {
+        var networkString = rowTpl;
+        networkString = replaceTemplateTokenOnce(networkString, BLOCKCHAIN_NETWORK_INDEX_TEMPLATE, index.toString());
+        networkString = replaceTemplateTokenOnce(networkString, BLOCKCHAIN_NETWORK_NAME_TEMPLATE, htmlEncode(String(networkItem.blockchainName)));
+        networkString = replaceTemplateTokenOnce(networkString, BLOCKCHAIN_NETWORK_ID_TEMPLATE, htmlEncode(String(networkItem.networkId)));
+        networkString = replaceTemplateTokenOnce(networkString, BLOCKCHAIN_SCAN_API_DOMAIN_TEMPLATE, htmlEncode(String(networkItem.scanApiDomain)));
+        networkString = replaceTemplateTokenOnce(networkString, BLOCKCHAIN_TXN_API_DOMAIN_TEMPLATE, htmlEncode(String(networkItem.txnApiDomain)));
+        networkString = replaceTemplateTokenOnce(networkString, BLOCKCHAIN_EXPLORER_API_DOMAIN_TEMPLATE, htmlEncode(String(networkItem.blockExplorerDomain)));
+        let rpcDisplay = networkItem.rpcEndpoint;
+        if (rpcDisplay == null || String(rpcDisplay).trim() === "") {
+            rpcDisplay = "public.rpc.quantumcoinapi.com";
+        }
+        networkString = replaceTemplateTokenOnce(networkString, BLOCKCHAIN_RPC_ENDPOINT_TEMPLATE, htmlEncode(String(rpcDisplay)));
         networkListString = networkListString + networkString;
     }
     document.getElementById("tbodyNetworkRow").innerHTML = networkListString;
@@ -1307,14 +1359,33 @@ function showAddNetworkScreen() {
     return false;
 }
 
+function buildAddNetworkConfirmDetails() {
+    let jsonString = (document.getElementById("txtNetworkJSON").value || "").replace(/^\uFEFF/, "").trim();
+    const lv = langJson.langValues;
+    if (jsonString.length < 1) {
+        return "\n\n" + lv.addNetworkCheckEmpty;
+    }
+    try {
+        let obj = JSON.parse(jsonString);
+        let name = obj && obj.blockchainName != null ? String(obj.blockchainName) : "";
+        if (name === "") {
+            return "\n\n" + lv.addNetworkCheckMissingName;
+        }
+        return "\n\n" + lv.addNetworkNewPrefix + name;
+    } catch (e) {
+        return "\n\n" + lv.addNetworkCheckInvalidJson;
+    }
+}
+
 function addNetwork() {
-    showConfirmAndExecuteOnConfirm(langJson.langValues.addNetworkWarn, checkAndAddNetwork);
+    let msg = langJson.langValues.addNetworkWarn + buildAddNetworkConfirmDetails();
+    showConfirmAndExecuteOnConfirm(msg, checkAndAddNetwork);
 }
 
 async function checkAndAddNetwork() {
     try {
-        let jsonString = document.getElementById("txtNetworkJSON").value;
-        if (jsonString == null || jsonString.length < 1) {
+        let jsonString = (document.getElementById("txtNetworkJSON").value || "").replace(/^\uFEFF/, "").trim();
+        if (jsonString.length < 1) {
             showWarnAlert(langJson.langValues.invalidNetworkJson);
             return;
         }

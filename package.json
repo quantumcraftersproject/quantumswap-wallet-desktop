@@ -50,7 +50,7 @@
     "@electron-forge/maker-rpm": "^6.0.5",
     "@electron-forge/maker-squirrel": "^6.0.5",
     "@electron-forge/maker-zip": "^6.0.5",
-    "electron": "^40.4.1"
+    "electron": "^40.8.5"
   },
   "overrides": {
     "tar": "^7.5.11",

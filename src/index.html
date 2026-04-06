@@ -32,6 +32,16 @@
 </head>
 
 <body>
+<template id="tplBlockchainNetworkRow">
+    <tr class="network-row">
+        <td>[BLOCKCHAIN_NETWORK_ID]</td>
+        <td>[BLOCKCHAIN_NETWORK_NAME]</td>
+        <td>[BLOCKCHAIN_SCAN_API_URL]</td>
+        <td>[BLOCKCHAIN_TXN_API_URL]</td>
+        <td>[BLOCKCHAIN_EXPLORER_API_URL]</td>
+        <td>[BLOCKCHAIN_RPC_ENDPOINT_URL]</td>
+    </tr>
+</template>
 <dialog id="modalEulaDialog" class="modal" tabindex="-1" role="dialog">
     <div class="modal-content">
         <div style="margin-bottom:30px;">
@@ -1962,7 +1972,7 @@
                     </div>
                     <div class="roundex-box" style="padding-top: 15px; padding-bottom: 15px;">
                         <div>
-                            <div class="heading large" style="float:left;width:fit-content;" data-lang-key="wallets">Wallets</div>
+                            <div class="heading large" style="float:left;width:fit-content;" data-lang-key="networks">Networks</div>
                         </div>
                         <div class="divider"></div>
                         <div class="blocks-content scrollbar" style="text-align: left; overflow: auto ;max-height:380px;" id="divNetworkList" tabindex="1">
@@ -1978,14 +1988,6 @@
                                     </tr>
                                 </thead>
                                 <tbody id="tbodyNetworkRow">
-                                    <tr class="network-row">
-                                        <td>[BLOCKCHAIN_NETWORK_ID]</td>
-                                        <td>[BLOCKCHAIN_NETWORK_NAME]</td>
-                                        <td>[BLOCKCHAIN_SCAN_API_URL]</td>
-                                        <td>[BLOCKCHAIN_TXN_API_URL]</td>
-                                        <td>[BLOCKCHAIN_EXPLORER_API_URL]</td>
-                                        <td>[BLOCKCHAIN_RPC_ENDPOINT_URL]</td>
-                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -2447,7 +2449,9 @@
         };
 
         window.addEventListener("unhandledrejection", event => {
-            showErrorAndLockup(message);
+            var reason = event.reason;
+            var detail = (reason && reason.message) ? String(reason.message) : String(reason);
+            showErrorAndLockup(detail);
         });
 
         window.onload = function () {

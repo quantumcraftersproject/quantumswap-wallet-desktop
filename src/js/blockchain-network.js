@@ -8,6 +8,95 @@ var regex = new RegExp('^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2
 
 var blockchainIndexToNetworkMap = new Map(); //key is index, value is BlockchainNetwork
 
+/** Windows JSON-RPC over named pipe (Geth): //./pipe/geth.ipc or \\.\pipe\geth.ipc */
+function isWindowsNamedPipeRpcPath(s) {
+    const t = String(s).trim();
+    if (/^\/\/\.\/pipe\/.+/i.test(t)) {
+        return true;
+    }
+    return /^\\\\\.\\pipe\\/i.test(t);
+}
+
+/** Unix domain socket path, typically …/geth.ipc */
+function isUnixIpcSocketRpcPath(s) {
+    const t = String(s).trim();
+    if (t.length < 2 || t.length > 512) {
+        return false;
+    }
+    if (!t.startsWith("/") || t.startsWith("//")) {
+        return false;
+    }
+    return /\.ipc$/i.test(t);
+}
+
+function normalizeIpcRpcPath(s) {
+    let t = String(s).trim();
+    if (/^\\\\\.\\pipe\\/i.test(t)) {
+        return "//./pipe/" + t.replace(/^\\\\\.\\pipe\\/i, "").replace(/\\/g, "/");
+    }
+    return t;
+}
+
+/** Strip ws(s)://, https://, paths, and userinfo; return host[:port] for use with buildSwapRpcUrl. */
+function normalizeRpcEndpoint(rpcEndpoint) {
+    if (rpcEndpoint == null || typeof rpcEndpoint !== "string") {
+        return rpcEndpoint;
+    }
+    let s = rpcEndpoint.trim();
+    if (s === "") {
+        return s;
+    }
+    if (isWindowsNamedPipeRpcPath(s) || isUnixIpcSocketRpcPath(s)) {
+        return normalizeIpcRpcPath(s);
+    }
+    if (/^(\d{1,3}\.){3}\d{1,3}(:[0-9]{1,5})?$/.test(s)) {
+        return s;
+    }
+    if (/^localhost(:[0-9]{1,5})?$/i.test(s)) {
+        return s;
+    }
+    try {
+        const withScheme = /^(https?|wss?):\/\//i.test(s) ? s : "https://" + s;
+        const u = new URL(withScheme);
+        if (!u.hostname) {
+            return s;
+        }
+        return u.port ? u.hostname + ":" + u.port : u.hostname;
+    } catch (e) {
+        return s;
+    }
+}
+
+function isValidRpcEndpointHost(s) {
+    if (s == null) {
+        return false;
+    }
+    const trimmed = String(s).trim();
+    if (trimmed === "") {
+        return false;
+    }
+    if (isWindowsNamedPipeRpcPath(trimmed) || isUnixIpcSocketRpcPath(trimmed)) {
+        return true;
+    }
+    const normalizedIpc = normalizeIpcRpcPath(trimmed);
+    if (isWindowsNamedPipeRpcPath(normalizedIpc) || isUnixIpcSocketRpcPath(normalizedIpc)) {
+        return true;
+    }
+    try {
+        const withScheme = /^(https?|wss?):\/\//i.test(trimmed) ? trimmed : "https://" + trimmed;
+        const u = new URL(withScheme);
+        if (!u.hostname || u.hostname.length < 1 || u.hostname.length > 253) {
+            return false;
+        }
+        if (u.port !== "" && (parseInt(u.port, 10) < 1 || parseInt(u.port, 10) > 65535)) {
+            return false;
+        }
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
 const isValidDomainName = (supposedDomainName) => {
     if(/localhost:[0-9]{1,5}/.test(supposedDomainName) === true){
         return true;
@@ -44,8 +133,15 @@ class BlockchainNetwork {
 
         if (rpcEndpoint == null || rpcEndpoint === "") {
             rpcEndpoint = "public.rpc.quantumcoinapi.com";
+        } else if (typeof rpcEndpoint !== "string") {
+            rpcEndpoint = String(rpcEndpoint);
         }
-        if (isValidDomainName(rpcEndpoint) == false) {
+        if (rpcEndpoint.trim() === "") {
+            rpcEndpoint = "public.rpc.quantumcoinapi.com";
+        } else {
+            rpcEndpoint = normalizeRpcEndpoint(rpcEndpoint.trim());
+        }
+        if (isValidRpcEndpointHost(rpcEndpoint) == false) {
             throw new Error("BlockchainNetwork invalid rpcEndpoint URL")
         }
 
@@ -113,13 +209,22 @@ async function blockchainNetworkSaveDefaults() {
 }
 
 async function blockchainNetworkAddNew(networkJson) {
-    let networkItem = JSON.parse(networkJson);
+    let jsonRaw = typeof networkJson === "string" ? networkJson.replace(/^\uFEFF/, "").trim() : String(networkJson);
+    let networkItem = JSON.parse(jsonRaw);
     let maxIndex = await blockchainNetworkGetMaxIndex();
     maxIndex = maxIndex + 1;
     let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.txnApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, networkItem.rpcEndpoint, maxIndex);
     let key = BLOCKCHAIN_NETWORK_KEY_PREFIX + maxIndex.toString();
 
-    let itemStoreResult = await storageSetItem(key, networkJson);
+    const stored = {
+        scanApiDomain: networkItem.scanApiDomain,
+        txnApiDomain: networkItem.txnApiDomain,
+        blockExplorerDomain: networkItem.blockExplorerDomain,
+        networkId: networkItem.networkId,
+        blockchainName: String(networkItem.blockchainName),
+        rpcEndpoint: blockchainNetwork.rpcEndpoint
+    };
+    let itemStoreResult = await storageSetItem(key, JSON.stringify(stored));
     if (itemStoreResult != true) {
         throw new Error("blockchainNetworkAddNew item store failed");
     }
@@ -138,7 +243,14 @@ async function blockchainNetworksList() {
     for (var i = 0; i <= maxIndex; i++) {
         let key = BLOCKCHAIN_NETWORK_KEY_PREFIX + i.toString();
         let networkJson = await storageGetItem(key);
+        if (networkJson == null || networkJson === "") {
+            console.warn("quantumswapwallet: missing network storage entry " + key);
+            continue;
+        }
         let networkItem = JSON.parse(networkJson);
+        if (networkItem.rpcEndpoint === undefined || networkItem.rpcEndpoint === null || networkItem.rpcEndpoint === "") {
+            delete networkItem.rpcEndpoint;
+        }
         let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.txnApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, networkItem.rpcEndpoint, i);
         blockchainIndexToNetworkMap.set(i, blockchainNetwork);
     }
