@@ -2,7 +2,6 @@
   "networks": [
     {
       "scanApiDomain": "app.readrelay.quantumcoinapi.com",
-      "txnApiDomain": "app.writerelay.quantumcoinapi.com",
       "blockExplorerDomain": "quantumscan.com",
       "blockchainName": "MAINNET",
       "networkId": 123123,

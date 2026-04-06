@@ -17,6 +17,11 @@ const { parseEther, formatEther, FixedNumber } = require("quantumcoin");
 const crypto = require('crypto');
 const AES_ALGORITHM = 'aes-256-cbc';
 
+function signingOverrides(wallet, data, base) {
+    const fullSign = data && data.advancedSigningEnabled === true;
+    return { ...base, signingContext: wallet.getSigningContext(fullSign) };
+}
+
 const additionalData = { myKey: 'myValue' }
 const gotTheLock = app.requestSingleInstanceLock(additionalData)
 var startFilename = "index.html";
@@ -615,7 +620,7 @@ ipcMain.handle('SwapSubmitApproval', async (event, data) => {
         const gasLimit = Number(data.gasLimit) || 84000;
 
         const token = IERC20.connect(getAddress(tokenAddr), wallet);
-        const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), amountWei, { gasLimit });
+        const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), amountWei, signingOverrides(wallet, data, { gasLimit }));
         return { success: true, txHash: tx.hash, error: null };
     } catch (err) {
         return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
@@ -673,7 +678,7 @@ ipcMain.handle('SwapSubmitSwap', async (event, data) => {
             path,
             getAddress(recipientAddress),
             deadline,
-            { gasLimit }
+            signingOverrides(wallet, data, { gasLimit })
         );
         return { success: true, txHash: tx.hash, error: null };
     } catch (err) {
@@ -703,7 +708,7 @@ ipcMain.handle('SwapSubmitRemoveAllowance', async (event, data) => {
         const gasLimit = Number(data.gasLimit) || 84000;
 
         const token = IERC20.connect(getAddress(tokenAddr), wallet);
-        const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), 0n, { gasLimit });
+        const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), 0n, signingOverrides(wallet, data, { gasLimit }));
         return { success: true, txHash: tx.hash, error: null };
     } catch (err) {
         return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
@@ -734,7 +739,7 @@ ipcMain.handle('SwapSubmitAddAllowance', async (event, data) => {
         const gasLimit = Number(data.gasLimit) || 84000;
 
         const token = IERC20.connect(getAddress(tokenAddr), wallet);
-        const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), amountWei, { gasLimit });
+        const tx = await token.approve(getAddress(SWAP_ROUTER_V2_CONTRACT_ADDRESS), amountWei, signingOverrides(wallet, data, { gasLimit }));
         return { success: true, txHash: tx.hash, error: null };
     } catch (err) {
         return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
@@ -761,13 +766,13 @@ ipcMain.handle('OfflineSignCoinTransaction', async (event, data) => {
         const valueWei = parseUnits(normalizeAmountString(data.amount), 18);
         const gasLimit = Number(data.gasLimit) || 21000;
 
-        const txData = await wallet.signTransaction({
+        const txData = await wallet.signTransaction(signingOverrides(wallet, data, {
             to: getAddress(data.toAddress),
             value: valueWei,
             nonce: nonce,
             chainId: chainId,
             gasLimit: gasLimit
-        });
+        }));
         return { success: true, txData: txData, error: null };
     } catch (err) {
         return { success: false, txData: null, error: (err && err.message) ? err.message : String(err) };
@@ -798,13 +803,13 @@ ipcMain.handle('OfflineSignTokenTransaction', async (event, data) => {
         const gasLimit = Number(data.gasLimit) || 84000;
 
         const token = IERC20.connect(getAddress(data.contractAddress), wallet);
-        const txReq = await token.populateTransaction.transfer(getAddress(data.toAddress), amountWei, { gasLimit });
+        const txReq = await token.populateTransaction.transfer(getAddress(data.toAddress), amountWei, signingOverrides(wallet, data, { gasLimit }));
 
-        const txData = await wallet.signTransaction({
+        const txData = await wallet.signTransaction(signingOverrides(wallet, data, {
             ...txReq,
             nonce: nonce,
             chainId: chainId
-        });
+        }));
         return { success: true, txData: txData, error: null };
     } catch (err) {
         return { success: false, txData: null, error: (err && err.message) ? err.message : String(err) };
@@ -851,7 +856,7 @@ ipcMain.handle('StakingContractSubmit', async (event, data) => {
         const contract = new Contract(STAKING_CONTRACT_ADDRESS, STAKING_ABI_JSON, wallet);
         const methodArgs = prepareStakingMethodArgs(STAKING_ABI_JSON, data.method, data.methodArgs);
         const gasLimit = Number(data.gasLimit) || 250000;
-        const overrides = { gasLimit };
+        const overrides = signingOverrides(wallet, data, { gasLimit });
         if (data.value && data.value !== "0" && data.value !== "0.0") {
             overrides.value = parseUnits(normalizeAmountString(data.value), 18);
         }
@@ -884,14 +889,14 @@ ipcMain.handle('StakingContractOfflineSign', async (event, data) => {
         const contract = new Contract(STAKING_CONTRACT_ADDRESS, STAKING_ABI_JSON, wallet);
         const methodArgs = prepareStakingMethodArgs(STAKING_ABI_JSON, data.method, data.methodArgs);
         const gasLimit = Number(data.gasLimit) || 250000;
-        const overrides = { gasLimit };
+        const overrides = signingOverrides(wallet, data, { gasLimit });
         if (data.value && data.value !== "0" && data.value !== "0.0") {
             overrides.value = parseUnits(normalizeAmountString(data.value), 18);
         }
         methodArgs.push(overrides);
 
         const txReq = await contract.populateTransaction[data.method](...methodArgs);
-        const txData = await wallet.signTransaction({ ...txReq, nonce: nonce, chainId: chainId });
+        const txData = await wallet.signTransaction(signingOverrides(wallet, data, { ...txReq, nonce: nonce, chainId: chainId }));
         return { success: true, txData: txData, error: null };
     } catch (err) {
         return { success: false, txData: null, error: (err && err.message) ? err.message : String(err) };
@@ -919,11 +924,11 @@ ipcMain.handle('SendCoinsSubmit', async (event, data) => {
         const valueWei = parseUnits(normalizeAmountString(data.amount), 18);
         const gasLimit = Number(data.gasLimit) || 21000;
 
-        const tx = await wallet.sendTransaction({
+        const tx = await wallet.sendTransaction(signingOverrides(wallet, data, {
             to: getAddress(data.toAddress),
             value: valueWei,
             gasLimit: gasLimit
-        });
+        }));
         return { success: true, txHash: tx.hash, error: null };
     } catch (err) {
         return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };
@@ -955,7 +960,7 @@ ipcMain.handle('SendTokensSubmit', async (event, data) => {
         const gasLimit = Number(data.gasLimit) || 84000;
 
         const token = IERC20.connect(getAddress(data.contractAddress), wallet);
-        const tx = await token.transfer(getAddress(data.toAddress), amountWei, { gasLimit });
+        const tx = await token.transfer(getAddress(data.toAddress), amountWei, signingOverrides(wallet, data, { gasLimit }));
         return { success: true, txHash: tx.hash, error: null };
     } catch (err) {
         return { success: false, txHash: null, error: (err && err.message) ? err.message : String(err) };

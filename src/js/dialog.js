@@ -54,6 +54,11 @@ var btnOkOfflineTxnSigning = document.getElementById("btnOkOfflineTxnSigning");
 var btnCancelOfflineTxnSigning = document.getElementById("btnCancelOfflineTxnSigning");
 var onCloseFuncOfflineTxnSigning = null;
 
+var modalAdvancedSigning = document.getElementById("modalAdvancedSigning");
+var btnOkAdvancedSigning = document.getElementById("btnOkAdvancedSigning");
+var btnCancelAdvancedSigning = document.getElementById("btnCancelAdvancedSigning");
+var onCloseFuncAdvancedSigning = null;
+
 function showAlert(txt) {
     modalOkDialog.style.display = "block";
     modalOkDialog.showModal();
@@ -204,12 +209,49 @@ btnCancelOfflineTxnSigning.onclick = function () {
     onCloseFuncOfflineTxnSigning = null;
 }
 
+async function showAdvancedSigningSettingDialog(f) {
+    var defaultVal = await advancedSigningGetDefaultValue();
+    if (defaultVal == false) {
+        document.getElementById('optAdvancedSigningDisabled').checked = true;
+    } else {
+        document.getElementById('optAdvancedSigningEnabled').checked = true;
+    }
+    modalAdvancedSigning.style.display = "block";
+    modalAdvancedSigning.showModal();
+    onCloseFuncAdvancedSigning = f;
+    return false;
+}
+
+btnOkAdvancedSigning.onclick = function () {
+    modalAdvancedSigning.style.display = "none";
+    modalAdvancedSigning.close();
+    var advancedSigningValue = document.querySelector('input[name="optAdvancedSigning"]:checked')?.value;
+    if (!advancedSigningValue || advancedSigningValue === "") {
+
+    } else {
+        saveSelectedAdvancedSigningSetting();
+    }
+
+    if (onCloseFuncAdvancedSigning == null) {
+
+    } else {
+        onCloseFuncAdvancedSigning();
+        onCloseFuncAdvancedSigning = null;
+    }
+}
+
+btnCancelAdvancedSigning.onclick = function () {
+    modalAdvancedSigning.style.display = "none";
+    modalAdvancedSigning.close();
+    onCloseFuncAdvancedSigning = null;
+}
+
 
 var modalSwapApprovalConfirm = document.getElementById("modalSwapApprovalConfirm");
 var modalSwapApprovalSubmit = document.getElementById("modalSwapApprovalSubmit");
 
 window.onclick = function (event) {
-    if (event.target == modalOkDialog || event.target == modalConfirm || event.target == modalYesNoDialog || event.target == modalNetwork || event.target == modaOfflineTxnSigning || event.target == modalOfflineSignature || event.target == modalSwapApprovalConfirm || event.target == modalSwapApprovalSubmit) {
+    if (event.target == modalOkDialog || event.target == modalConfirm || event.target == modalYesNoDialog || event.target == modalNetwork || event.target == modaOfflineTxnSigning || event.target == modalAdvancedSigning || event.target == modalOfflineSignature || event.target == modalSwapApprovalConfirm || event.target == modalSwapApprovalSubmit) {
         if (modalOkDialog.style.display !== "none") {
             modalNetwork.style.display = "none";
             modalNetwork.close();
@@ -234,6 +276,11 @@ window.onclick = function (event) {
         if (modaOfflineTxnSigning.style.display !== "none") {
             modaOfflineTxnSigning.style.display = "none";
             modaOfflineTxnSigning.close();
+        }
+
+        if (modalAdvancedSigning && modalAdvancedSigning.style.display !== "none") {
+            modalAdvancedSigning.style.display = "none";
+            modalAdvancedSigning.close();
         }
 
         if (modalSwapApprovalConfirm && modalSwapApprovalConfirm.style.display !== "none") {

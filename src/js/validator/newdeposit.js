@@ -94,7 +94,8 @@ async function newDepositSubmit(quantumWallet) {
             value: validatorDepositCoins,
             gasLimit: NEW_DEPOSIT_GAS,
             privateKey: await quantumWallet.getPrivateKey(),
-            publicKey: await quantumWallet.getPublicKey()
+            publicKey: await quantumWallet.getPublicKey(),
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
 
         if (result && result.success && result.txHash) {
@@ -137,7 +138,8 @@ async function newDepositOfflineSign(quantumWallet) {
             gasLimit: NEW_DEPOSIT_GAS,
             nonce: parseInt(currentNonce),
             privateKey: await quantumWallet.getPrivateKey(),
-            publicKey: await quantumWallet.getPublicKey()
+            publicKey: await quantumWallet.getPublicKey(),
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
 
         if (result && result.success && result.txData) {

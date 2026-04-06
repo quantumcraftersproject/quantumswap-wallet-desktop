@@ -17,7 +17,7 @@
   "dependencies": {
     "@electron-forge/maker-dmg": "^6.1.1",
     "electron-squirrel-startup": "^1.0.0",
-    "quantumcoin": "^7.0.8",
+    "quantumcoin": "^7.0.9",
     "quantumswap": "^0.0.5",
     "sjcl": "^1.0.8"
   },

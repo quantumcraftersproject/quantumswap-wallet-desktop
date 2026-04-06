@@ -212,7 +212,8 @@ async function signOfflineTxnSendToken(quantumWallet) {
             nonce: parseInt(currentNonce),
             gasLimit: TOKEN_SEND_GAS,
             privateKey: await quantumWallet.getPrivateKey(),
-            publicKey: await quantumWallet.getPublicKey()
+            publicKey: await quantumWallet.getPublicKey(),
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
 
         if (!result || !result.success || !result.txData) {
@@ -253,7 +254,8 @@ async function signOfflineTxnSend(quantumWallet) {
             nonce: parseInt(currentNonce),
             gasLimit: COIN_SEND_GAS,
             privateKey: await quantumWallet.getPrivateKey(),
-            publicKey: await quantumWallet.getPublicKey()
+            publicKey: await quantumWallet.getPublicKey(),
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
 
         if (!result || !result.success || !result.txData) {
@@ -381,7 +383,8 @@ async function sendCoinsSubmit(quantumWallet) {
             amount: sendQuantity,
             privateKey: await quantumWallet.getPrivateKey(),
             publicKey: await quantumWallet.getPublicKey(),
-            gasLimit: COIN_SEND_GAS
+            gasLimit: COIN_SEND_GAS,
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
 
         if (!result || !result.success || !result.txHash) {
@@ -427,7 +430,8 @@ async function sendTokensSubmit(quantumWallet) {
             fromDecimals: getSwapTokenDecimals(contractAddress),
             privateKey: await quantumWallet.getPrivateKey(),
             publicKey: await quantumWallet.getPublicKey(),
-            gasLimit: TOKEN_SEND_GAS
+            gasLimit: TOKEN_SEND_GAS,
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
 
         if (!result || !result.success || !result.txHash) {

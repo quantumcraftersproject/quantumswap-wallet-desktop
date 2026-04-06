@@ -82,7 +82,8 @@ async function initiatePartialWithdrawalConfirmSubmit(quantumWallet) {
             value: "0",
             gasLimit: INITIATE_PARTIAL_WITHDRAWAL_GAS,
             privateKey: await quantumWallet.getPrivateKey(),
-            publicKey: await quantumWallet.getPublicKey()
+            publicKey: await quantumWallet.getPublicKey(),
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
 
         if (result && result.success && result.txHash) {
@@ -124,7 +125,8 @@ async function initiatePartialWithdrawalConfirmOfflineSign(quantumWallet) {
             gasLimit: INITIATE_PARTIAL_WITHDRAWAL_GAS,
             nonce: parseInt(currentNonce),
             privateKey: await quantumWallet.getPrivateKey(),
-            publicKey: await quantumWallet.getPublicKey()
+            publicKey: await quantumWallet.getPublicKey(),
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
 
         if (result && result.success && result.txData) {

@@ -194,45 +194,6 @@ async function getTransactionStatusByHash(scanApiDomain, address, txHash) {
     return { status: 'unknown' };
 }
 
-async function postTransaction(txnApiDomain, txnData) {
-    let url = HTTPS;
-    if(isHttpAllowedDomain(txnApiDomain)) {
-        url = HTTP;
-    }
-    url = url + txnApiDomain + "/transactions";
-    if (txnData == null) {
-        throw new Error("invalid txnData");
-    }
-
-    let txnDataJson = JSON.stringify({ txnData: txnData });
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }, 
-        body: txnDataJson
-    });
-
-    if (response === null) {
-        throw new Error(langJson.errors.invalidApiResponse);
-    }
-
-    if(response.status === 400) {
-        let body = await response.text();
-
-        if (response.statusText === null) {
-            throw new Error(langJson.errors.lowGasError + " " + body);
-        } else {
-            throw new Error(langJson.errors.lowGasError + " " + response.statusText + " " + body);
-        }
-    }
-
-    if (response.status == 200 || response.status == 204) {
-        return true;
-    }
-
-    return false;
-}
-
 async function listAccountTokens(scanApiDomain, address, pageIndex) {
     let url = HTTPS;
     if(isHttpAllowedDomain(scanApiDomain)) {

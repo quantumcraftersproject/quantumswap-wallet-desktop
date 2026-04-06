@@ -23,8 +23,8 @@ const isValidDomainName = (supposedDomainName) => {
 };
 
 class BlockchainNetwork {
-    constructor(scanApiDomain, txnApiDomain, blockExplorerDomain, networkId, blockchainName, rpcEndpoint, index) {
-        if (scanApiDomain == null || txnApiDomain == null || blockExplorerDomain == null || networkId == null || blockchainName == null) {
+    constructor(scanApiDomain, blockExplorerDomain, networkId, blockchainName, rpcEndpoint, index) {
+        if (scanApiDomain == null || blockExplorerDomain == null || networkId == null || blockchainName == null) {
             throw new Error("BlockchainNetwork null values")
         }
 
@@ -50,7 +50,6 @@ class BlockchainNetwork {
         }
 
         this.scanApiDomain = scanApiDomain;
-        this.txnApiDomain = txnApiDomain;
         this.blockExplorerDomain = blockExplorerDomain;
         this.networkId = networkId;
         this.blockchainName = blockchainName;
@@ -116,7 +115,7 @@ async function blockchainNetworkAddNew(networkJson) {
     let networkItem = JSON.parse(networkJson);
     let maxIndex = await blockchainNetworkGetMaxIndex();
     maxIndex = maxIndex + 1;
-    let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.txnApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, networkItem.rpcEndpoint, maxIndex);
+    let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, networkItem.rpcEndpoint, maxIndex);
     let key = BLOCKCHAIN_NETWORK_KEY_PREFIX + maxIndex.toString();
 
     let itemStoreResult = await storageSetItem(key, networkJson);
@@ -139,7 +138,7 @@ async function blockchainNetworksList() {
         let key = BLOCKCHAIN_NETWORK_KEY_PREFIX + i.toString();
         let networkJson = await storageGetItem(key);
         let networkItem = JSON.parse(networkJson);
-        let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.txnApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, networkItem.rpcEndpoint, i);
+        let blockchainNetwork = new BlockchainNetwork(networkItem.scanApiDomain, networkItem.blockExplorerDomain, networkItem.networkId, networkItem.blockchainName, networkItem.rpcEndpoint, i);
         blockchainIndexToNetworkMap.set(i, blockchainNetwork);
     }
 

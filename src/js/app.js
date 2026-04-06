@@ -30,12 +30,12 @@ const TAB_INDEX_TEMPLATE = "[TAB_INDEX]";
 const BLOCKCHAIN_NETWORK_NAME_TEMPLATE = "[BLOCKCHAIN_NETWORK_NAME]";
 const BLOCKCHAIN_NETWORK_ID_TEMPLATE = "[BLOCKCHAIN_NETWORK_ID]";
 const BLOCKCHAIN_SCAN_API_DOMAIN_TEMPLATE = "[BLOCKCHAIN_SCAN_API_URL]";
-const BLOCKCHAIN_TXN_API_DOMAIN_TEMPLATE = "[BLOCKCHAIN_TXN_API_URL]";
 const BLOCKCHAIN_EXPLORER_API_DOMAIN_TEMPLATE = "[BLOCKCHAIN_EXPLORER_API_URL]";
 const BLOCKCHAIN_RPC_ENDPOINT_TEMPLATE = "[BLOCKCHAIN_RPC_ENDPOINT_URL]";
 const TRANSACTION_HASH_TEMPLATE = "[TRANSACTION_HASH]";
 const DROPDOWN_TEXT = "&#x25BC;";
 const DEFAULT_OFFLINE_TXN_SIGNING_SETTING_KEY = "DefaultOfflineTxnSigningSettingKey";
+const DEFAULT_ADVANCED_SIGNING_SETTING_KEY = "DefaultAdvancedSigningSettingKey";
 const maxTokenNameLength = 25;
 const maxTokenSymbolLength = 6;
 const QuantumCoin = "QuantumCoin"
@@ -267,7 +267,6 @@ async function showBlockchainNetworksTable() {
         networkString = networkString.replaceAll(BLOCKCHAIN_NETWORK_NAME_TEMPLATE, htmlEncode(networkItem.blockchainName));
         networkString = networkString.replaceAll(BLOCKCHAIN_NETWORK_ID_TEMPLATE, htmlEncode(networkItem.networkId.toString()));
         networkString = networkString.replaceAll(BLOCKCHAIN_SCAN_API_DOMAIN_TEMPLATE, htmlEncode(networkItem.scanApiDomain));
-        networkString = networkString.replaceAll(BLOCKCHAIN_TXN_API_DOMAIN_TEMPLATE, htmlEncode(networkItem.txnApiDomain));
         networkString = networkString.replaceAll(BLOCKCHAIN_EXPLORER_API_DOMAIN_TEMPLATE, htmlEncode(networkItem.blockExplorerDomain));
         networkString = networkString.replaceAll(BLOCKCHAIN_RPC_ENDPOINT_TEMPLATE, htmlEncode(networkItem.rpcEndpoint));
         networkListString = networkListString + networkString;
@@ -2386,7 +2385,8 @@ async function submitSwapApprovalTransaction(quantumWallet) {
             fromDecimals: getSwapTokenDecimals(fromValue),
             privateKey: await quantumWallet.getPrivateKey(),
             publicKey: await quantumWallet.getPublicKey(),
-            gasLimit: gas
+            gasLimit: gas,
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
         if (!result || !result.success || !result.txHash) {
             setSwapConfirmPanelWaitingForApprovalTx(false);
@@ -2425,7 +2425,8 @@ async function submitSwapTransaction(quantumWallet) {
             recipientAddress: currentWalletAddress,
             privateKey: await quantumWallet.getPrivateKey(),
             publicKey: await quantumWallet.getPublicKey(),
-            gasLimit: gas
+            gasLimit: gas,
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
         if (!result || !result.success || !result.txHash) {
             setSwapConfirmPanelWaitingForApprovalTx(false);
@@ -2457,7 +2458,8 @@ async function submitRemoveAllowanceTransaction(quantumWallet) {
             fromTokenValue: fromValue,
             privateKey: await quantumWallet.getPrivateKey(),
             publicKey: await quantumWallet.getPublicKey(),
-            gasLimit: gas
+            gasLimit: gas,
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
         if (!result || !result.success || !result.txHash) {
             setRemoveAllowancePanelWaiting(false);
@@ -2494,7 +2496,8 @@ async function submitAddAllowanceTransaction(quantumWallet) {
             fromDecimals: getSwapTokenDecimals(fromValue),
             privateKey: await quantumWallet.getPrivateKey(),
             publicKey: await quantumWallet.getPublicKey(),
-            gasLimit: gas
+            gasLimit: gas,
+            advancedSigningEnabled: await advancedSigningGetDefaultValue()
         });
         if (!result || !result.success || !result.txHash) {
             setAddAllowancePanelWaiting(false);
@@ -3192,5 +3195,38 @@ async function saveSelectedOfflineTxnSigningSetting() {
         showWarnAlert(getGenericError(""));
     } else {
         return;
+    }
+}
+
+async function advancedSigningSetDefaultValue(value) {
+    let itemStoreResult = await storageSetItem(DEFAULT_ADVANCED_SIGNING_SETTING_KEY, value);
+    if (itemStoreResult != true) {
+        throw new Error("advancedSigningSetDefaultValue item store failed");
+    }
+    return true;
+}
+
+async function advancedSigningGetDefaultValue() {
+    let value = await storageGetItem(DEFAULT_ADVANCED_SIGNING_SETTING_KEY);
+    if (value == null) {
+        return false;
+    }
+    if (value === "enabled") {
+        return true;
+    }
+    return false;
+}
+
+async function saveSelectedAdvancedSigningSetting() {
+    const radioButtons = document.querySelectorAll('input[name="optAdvancedSigning"]');
+    let selectedValue = "";
+    radioButtons.forEach(function (radioButton) {
+        if (radioButton.checked) {
+            selectedValue = radioButton.value;
+        }
+    });
+    let result = await advancedSigningSetDefaultValue(selectedValue);
+    if (result == false) {
+        showWarnAlert(getGenericError(""));
     }
 }
