@@ -11,7 +11,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest]
 
     steps:
       - name: Check out Git repository
@@ -25,20 +25,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'   # ✅ LTS version
+          node-version: 21.7.1
 
       - name: Install Dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
-      # macOS only: install appdmg for DMG maker
       - name: Install DMG dependencies
         if: matrix.os == 'macos-latest'
         run: npm install --no-save appdmg
-
-      # Ubuntu only: install fakeroot/dpkg/rpm for DEB/RPM makers
-      - name: Install Linux packaging dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y fakeroot dpkg rpm
 
       - name: Publish
         run: npm run publish
@@ -49,6 +43,4 @@ jobs:
           allowUpdates: true
           artifacts: |
             out/make/squirrel.windows/x64/*.exe,
-            out/make/*.dmg,
-            out/make/**/*.deb,
-            out/make/**/*.rpm
+            out/make/*.dmg
