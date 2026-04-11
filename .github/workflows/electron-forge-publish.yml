@@ -31,6 +31,10 @@ jobs:
           node-version: '20'
           cache: npm
 
+      # Lockfile is generated with npm 10; npm 11 can produce trees npm 10's `npm ci` rejects ("Missing: glob@…").
+      - name: Use npm 10 for install
+        run: npm install -g npm@10.9.2
+
       - name: Install Dependencies
         run: npm ci --legacy-peer-deps --no-audit --no-fund
 
