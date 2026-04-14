@@ -1,15 +1,19 @@
-name: Build/release
+name: Build/Release
 
 on:
   push:
     tags:
-      - '*'    
+      - '*'
+
+permissions:
+  contents: write   # Required for release publishing
+  actions: read
+  checks: read
 
 jobs:
   release:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
-
     strategy:
       fail-fast: false
       matrix:
@@ -18,21 +22,19 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
-        
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11' 
-          
+          python-version: '3.11'
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          # Node 20 LTS: appdmg (native addon for DMG) often fails to build on Node 21+ / newer Xcode.
-          node-version: '20'
+          # Node 20 LTS was used before, but GitHub will enforce Node 24 soon.
+          node-version: '24'
           cache: npm
 
-      # `npm ci` is strict and often fails on macOS vs Windows with overrides + optional/git deps ("Missing: glob@…").
-      # `npm install` still honors package-lock.json but can reconcile a valid tree on the runner OS.
       - name: Install Dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
@@ -51,5 +53,6 @@ jobs:
         with:
           allowUpdates: true
           artifacts: |
-            out/make/squirrel.windows/x64/*.exe,
+            out/make/squirrel.windows/x64/*.exe
             out/make/*.dmg
+          token: ${{ secrets.GITHUB_TOKEN }}
