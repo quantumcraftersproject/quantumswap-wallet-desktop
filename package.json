@@ -1,7 +1,7 @@
 {
   "name": "quantumswapwallet",
   "productName": "QuantumSwap Wallet",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "QuantumSwap Wallet - Secure desktop wallet for Windows",
   "main": "src/index.js",
   "scripts": {
