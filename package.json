@@ -55,7 +55,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "quantumswapdex",
+        "owner": "${OWNER}",
         "repo": "quantumswap-wallet-desktop",
         "releaseType": "release"
       }
