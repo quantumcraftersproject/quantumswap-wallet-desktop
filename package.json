@@ -1,8 +1,8 @@
 {
   "name": "quantumswapwallet",
-  "productName": "QuantumSwap Wallet",
-  "version": "1.0.9",
-  "description": "QuantumSwap Wallet - Secure desktop wallet for Windows",
+  "productName": "QuantumSwapWallet",
+  "version": "1.0.8",
+  "description": "QuantumSwapWallet",
   "main": "src/index.js",
   "scripts": {
     "start": "electron .",
@@ -37,12 +37,6 @@
       "lib/**",
       "assets/**"
     ],
-    "extraResources": [
-      "assets/**",
-      "theme/**",
-      "js/**",
-      "lib/**"
-    ],
     "win": {
       "target": [
         {
@@ -58,27 +52,10 @@
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": true
     },
-    "mac": {
-      "target": "dmg",
-      "icon": "src/assets/icons/app/icon.icns",
-      "category": "public.app-category.finance",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
-    },
-    "dmg": {
-      "background": "src/assets/dmg-background.png",
-      "iconSize": 128,
-      "contents": [
-        { "x": 130, "y": 220, "type": "link", "path": "/Applications" },
-        { "x": 410, "y": 220, "type": "file" }
-      ]
-    },
     "publish": [
       {
         "provider": "github",
-        "owner": "steveharrington10",
+        "owner": "QuantumSwap Community",
         "repo": "quantumswap-wallet-desktop",
         "releaseType": "release"
       }

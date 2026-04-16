@@ -3,13 +3,13 @@ name: Build and Publish Release
 on:
   push:
     tags:
-      - 'v*'   # Runs when you push a tag like v1.0.7
+      - 'v*'
 
 jobs:
   build:
     strategy:
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
