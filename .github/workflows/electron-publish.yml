@@ -21,7 +21,10 @@ jobs:
         with:
           node-version: 24
           cache: 'npm'
-
+      
+      - name: Show repository owner
+        run: echo "Repository owner is ${{ github.repository_owner }}"
+        
       - name: Install dependencies
         run: npm install
 
