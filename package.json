@@ -1,7 +1,7 @@
 {
   "name": "quantumswapwallet",
   "productName": "QuantumSwapWallet",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "QuantumSwapWallet",
   "main": "src/index.js",
   "scripts": {
@@ -55,7 +55,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "Quantum Swap Community",
+        "owner": "QuantumSwap Community",
         "repo": "quantumswap-wallet-desktop",
         "releaseType": "release"
       }
