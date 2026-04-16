@@ -28,4 +28,5 @@ jobs:
       - name: Build and Publish
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
         run: npm run publish
