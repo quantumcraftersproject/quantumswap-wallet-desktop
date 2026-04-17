@@ -1,13 +1,13 @@
 {
   "name": "quantumswapwallet",
-  "productName": "QuantumSwap Wallet",
-  "version": "1.0.8",
-  "description": "QuantumSwap Wallet - Secure desktop wallet for Windows",
+  "productName": "QuantumSwapWallet",
+  "version": "1.2.2",
+  "description": "QuantumSwapWallet",
   "main": "src/index.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win",
-    "publish": "electron-builder --win --publish always",
+    "dist": "electron-builder",
+    "publish": "electron-builder --publish always",
     "lint": "eslint src",
     "build-icons": "node scripts/build-icons.js"
   },
@@ -55,7 +55,6 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "steveharrington10",
         "repo": "quantumswap-wallet-desktop",
         "releaseType": "release"
       }

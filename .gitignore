@@ -89,6 +89,7 @@ typings/
 
 # Electron-Forge
 out/
+dist/
 .vs/
 
 src/test.html
