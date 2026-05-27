@@ -20,7 +20,7 @@ jobs:
       - name: Download Wallet
         run: |
           mkdir -p ${{ github.workspace }}/download
-          curl -k https://quantumcrafters.org/download/QuantumSwapWallet-1.2.2-arm64.dmg --output ${{ github.workspace }}\download\QuantumSwapWallet-1.2.4.Setup.exe 
+          curl -k https://quantumcrafters.org/download/QuantumSwapWallet-1.2.4.Setup.exe --output ${{ github.workspace }}\download\QuantumSwapWallet-1.2.4.Setup.exe 
       - name: Create Release
         run: |
           powershell Get-FileHash ${{ github.workspace }}\download\QuantumSwapWallet-1.2.4.Setup.exe > ${{ github.workspace }}\download\QuantumSwapWallet-1.2.4.Setup.exe.txt
