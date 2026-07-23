@@ -9,12 +9,20 @@ import { searchSwapPath, SWAP_NO_ROUTE_ERROR } from "./swap-path-search";
 
 export { SWAP_NO_ROUTE_ERROR };
 
-// Recognized token contract addresses (Heisen, Y2Q). Duplicated from the
-// renderer's src/lib/tokenfilter.ts because the main process is a separate
-// TypeScript project; keep the two lists in sync.
+// Recognized token contract addresses. Duplicated from the renderer's
+// src/lib/tokenfilter.ts because the main process is a separate TypeScript
+// project; keep the two lists in sync.
 export const RECOGNIZED_TOKEN_CONTRACT_ADDRESSES = [
-    "0xe8ea8beb86e714ef2bde0afac17d6e45d1c35e48f312d6dc12c4fdb90d9e8a3d", // Heisen
-    "0xa8036870874fbed790ed4d3bbd41b2f390b9858ff021f2993e90c6d1cbb167c7", // Y2Q
+    "0xe8ea8beb86e714ef2bde0afac17d6e45d1c35e48f312d6dc12c4fdb90d9e8a3d", // Heisen (HSN)
+    "0xa8036870874fbed790ed4d3bbd41b2f390b9858ff021f2993e90c6d1cbb167c7", // Year2Quantum (Y2Q)
+    "0x4015b40b181f2415003f24118b215ce04f276509176eccb10e0c4a9ccbd458d2", // Lion (Lio)
+    "0x6ff70c260458c9f448ec7aab008f1611456d58edb12e7795bf88735e1986a6ad", // Tiger (tig)
+    "0x592a8abb1de07bc3797bc3c592fc74c099c5a311ba856fc66fb6d4cfc18c728d", // Cat (cat)
+    "0x05fe2265b69d0c70a24075180242736c7389876b8917f38400e6540519e663df", // panther (pant)
+    // Wrapped Q (WQ) from the Beta2 release. Redundant as a hop for the
+    // built-in release (release.wq is always the first candidate; findSwapPath
+    // dedupes), but keeps WQ routable under custom releases too.
+    "0x45bd01be5ef8509d9da183689ea7faf647331c54c7c9801de54c9ede9ac44d92", // Wrapped Q (WQ, Beta2 release)
 ];
 
 function swapHopCandidateAddresses(release: SwapReleaseAddresses): string[] {
