@@ -104,7 +104,6 @@
       "token-picker-imported": "imported",
       "token-picker-unrecognized": "unrecognized",
       "offline-signed-transactions": "Offline Signed Transactions",
-      "copy-bundle": "Copy Bundle",
       "offline-signing-details": "Offline signing details",
       "offline-rpc-fallback-warning": "RPC data is used when available. Otherwise route and chain state cannot be verified.",
       "offline-from-decimals": "From token decimals",

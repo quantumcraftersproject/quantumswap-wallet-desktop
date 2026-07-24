@@ -236,7 +236,13 @@ export function resizeBoxes(): void {
     byId("divMainScreenTokens").style.maxHeight = tokensMaxHeight;
     let elements = document.getElementsByClassName("roundex-box");
     for (let i = 0; i < elements.length; i++) {
-        (elements[i] as HTMLElement).style.maxHeight = maxHeight;
+        const box = elements[i] as HTMLElement;
+        // Boxes that size their own scroll areas relative to the viewport
+        // (advanced pools / liquidity forms) opt out of the screen-height cap:
+        // .roundex-box does not clip, so a cap smaller than the content makes
+        // the form spill past the box border.
+        if (box.hasAttribute("data-fluid-height")) continue;
+        box.style.maxHeight = maxHeight;
     }
 
     elements = document.getElementsByClassName("roundex-box-middle");

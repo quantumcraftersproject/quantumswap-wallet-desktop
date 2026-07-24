@@ -454,6 +454,17 @@ input.token-picker-search:focus {
     flex-direction: row;
 }
 
+/* Offline-bundle dialog: same problem. The legacy float / negative margin
+   would pull the footer Copy / Close buttons up over the content above;
+   keep them in normal flow. */
+#modalOfflineBundle .proceed,
+#modalOfflineBundle .cancel {
+    float: none;
+    margin-top: 0;
+    margin-left: 0;
+    flex-direction: row;
+}
+
 /* Match the web-app swap-direction control. The negative bottom margin only
    swallows dead space below the button (the "To token" heading's 3px top
    margin plus its line-box leading), so the visual gap above the button

@@ -484,11 +484,11 @@ function buildTokenPickerDialog(): HTMLElement {
 
 function buildOfflineBundleDialog(): HTMLElement {
     return el("dialog", { id: "modalOfflineBundle", class: "modal", tabindex: "-1", role: "dialog" }, [
-        el("div", { class: "modal-content", style: "max-width:680px;max-height:80vh;overflow:auto;" }, [
+        el("div", { class: "modal-content", style: "max-width:520px;max-height:80vh;overflow:auto;" }, [
             el("h3", { "data-lang-key": "offline-signed-transactions" }, ["Offline Signed Transactions"]),
             el("div", { id: "divOfflineBundleTransactions" }),
             el("div", { style: "margin-top:18px;display:flex;justify-content:flex-end;gap:12px;" }, [
-                el("button", { id: "btnOfflineBundleCopy", class: "proceed", type: "button", "data-lang-key": "copy-bundle" }, ["Copy Bundle"]),
+                el("button", { id: "btnOfflineBundleCopy", class: "proceed", type: "button", "data-lang-key": "copy" }, ["Copy"]),
                 el("button", { id: "btnOfflineBundleClose", class: "cancel", type: "button", "data-lang-key": "close" }, ["Close"]),
             ]),
         ]),

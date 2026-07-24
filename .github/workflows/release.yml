@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   gates:
     strategy:
@@ -21,6 +24,10 @@ jobs:
         with:
           node-version: 24.14.1
           cache: 'npm'
+
+      - name: Sync package version with tag
+        shell: bash
+        run: npm version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
 
       - name: Install dependencies
         run: npm install
@@ -39,3 +46,11 @@ jobs:
 
       - name: Package (no publish)
         run: npx electron-builder --publish never
+
+      - name: Release
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifacts: "dist/*.exe"
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true

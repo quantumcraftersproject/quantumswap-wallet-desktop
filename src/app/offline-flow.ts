@@ -35,16 +35,17 @@ function showBundle(transactions: OfflineSignedTransaction[]): void {
         const heading = document.createElement("div");
         heading.className = "heading medium";
         heading.textContent = transaction.label + " (nonce " + transaction.nonce + ")";
+        // Same look as the send flow's offline-signature box (#txtOfflineSignature):
+        // soft-wrapped hex with a vertical scrollbar. border-box keeps the
+        // 100%-wide textarea (padding + border included) inside the dialog
+        // instead of overflowing its right edge.
         const text = document.createElement("textarea");
         text.readOnly = true;
         text.value = transaction.txData;
+        text.rows = 8;
         text.style.width = "100%";
-        text.style.minHeight = "80px";
-        const copy = document.createElement("button");
-        copy.type = "button";
-        copy.className = "proceed";
-        copy.textContent = "Copy";
-        copy.addEventListener("click", () => { void WriteTextToClipboard(transaction.txData); });
+        text.style.boxSizing = "border-box";
+        text.style.overflow = "auto";
         section.appendChild(heading);
         if (transaction.contractAddress) {
             const address = document.createElement("div");
@@ -53,7 +54,6 @@ function showBundle(transactions: OfflineSignedTransaction[]): void {
             section.appendChild(address);
         }
         section.appendChild(text);
-        section.appendChild(copy);
         container.appendChild(section);
     }
     if (!bundleBound) {

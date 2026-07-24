@@ -220,8 +220,21 @@ async function renderTokenPicker(): Promise<void> {
         setStatus(t("token-picker-no-results", "No tokens match your search."));
         return;
     }
+    // With offline signing enabled the pasted contract is selectable right
+    // away (the on-chain lookup may hang or fail entirely while offline); the
+    // fallback row is replaced by resolved metadata if the lookup succeeds.
+    let fallbackRow: HTMLElement | null = null;
+    if (options.allowOfflineFallback) {
+        fallbackRow = tokenRow(createOfflineTokenFallback(
+            query,
+            t("token-picker-unresolved-token", "Unresolved token contract"),
+        ));
+        list.appendChild(fallbackRow);
+    }
     if (!networkStore.currentBlockchainNetwork) {
-        setStatus(t("token-picker-no-network", "Token lookup is unavailable."));
+        setStatus(options.allowOfflineFallback
+            ? t("token-picker-offline-fallback", "Token details unavailable. You can still select this contract for offline signing.")
+            : t("token-picker-no-network", "Token lookup is unavailable."));
         return;
     }
     setStatus(t("token-picker-looking-up", "Looking up token on-chain..."));
@@ -236,16 +249,13 @@ async function renderTokenPicker(): Promise<void> {
         if (!lookupGuard.isCurrent(seq) || currentOptions !== options) return;
         setBusy(false);
         setStatus("");
+        if (fallbackRow) fallbackRow.remove();
         list.appendChild(tokenRow(fromManualToken(token)));
     } catch (err: any) {
         if (!lookupGuard.isCurrent(seq) || currentOptions !== options) return;
         setBusy(false);
         if (options.allowOfflineFallback) {
             setStatus(t("token-picker-offline-fallback", "Token details unavailable. You can still select this contract for offline signing."));
-            list.appendChild(tokenRow(createOfflineTokenFallback(
-                query,
-                t("token-picker-unresolved-token", "Unresolved token contract"),
-            )));
         } else {
             setStatus((err && err.message) ? String(err.message) : String(err));
         }

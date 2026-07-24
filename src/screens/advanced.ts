@@ -70,6 +70,12 @@ function tokenPicker(selectId: string, tabindex: string, onchange: () => unknown
     ]);
 }
 
+// Label above an offline-signing-only input (these inputs are prefilled, so
+// the placeholder alone is usually hidden and the field looks unlabeled).
+function offlineFieldLabel(textContent: string): HTMLElement {
+    return el("div", { class: "heading medium" }, [textContent]);
+}
+
 // Right-aligned in-flow action button row (no float, so it always takes
 // vertical space and cannot overlap the content above or the box border).
 function actionButtonRow(buttonId: string, langKey: string, textContent: string, tabindex: string, onclick: () => unknown, marginBottom = "0"): HTMLElement {
@@ -161,7 +167,7 @@ function buildTokenCreateScreen(): HTMLElement {
         el("div", { class: "center-content" }, [
             el("div", { class: "center-content-rounded-container", style: "margin-top:15px;" }, [
                 el("div", { class: "back-container", role: "button", tabindex: "7", onclick: () => { void showAdvancedScreen(); } }),
-                el("div", { class: "roundex-box", style: "padding-top:15px; padding-bottom:115px;" }, [
+                el("div", { class: "roundex-box", style: "padding-top:15px; padding-bottom:65px;" }, [
                     gasHeaderRow("create-token", "Create Token", "spanCreateTokenGasFee", "divCreateTokenGasIcon", "8", onCreateTokenGasIconClick),
                     el("div", { class: "divider" }),
                     el("div", { class: "blocks-content scrollbar", style: "text-align: left; overflow: auto; " + ADV_SCROLL_PAD }, [
@@ -183,7 +189,7 @@ function buildTokenCreateScreen(): HTMLElement {
                             el("div", { id: "divCreateTokenError", class: "tx-steps-error", style: "display:none;" }),
                             el("div", { id: "divCreateTokenOfflineNotice", class: "tx-steps-error", style: "display:none;" }, ["Offline signing: RPC values are used when reachable; the transaction will not be broadcast."]),
                         ]),
-                        actionButtonRow("btnCreateToken", "create", "Create", "5", onCreateTokenClick),
+                        actionButtonRow("btnCreateToken", "create", "Create", "5", onCreateTokenClick, "15px"),
                     ]),
                 ]),
             ]),
@@ -196,13 +202,13 @@ function buildPoolsScreen(): HTMLElement {
         el("div", { class: "center-content" }, [
             el("div", { class: "center-content-rounded-container", style: "margin-top:15px;" }, [
                 el("div", { class: "back-container", role: "button", tabindex: "20", onclick: () => { void onPoolsBackClick(); } }),
-                el("div", { class: "roundex-box", style: "padding-top:15px; padding-bottom:15px; max-height:calc(100vh - 180px);" }, [
+                el("div", { class: "roundex-box", "data-fluid-height": "true", style: "padding-top:15px; padding-bottom:15px;" }, [
                     refreshHeaderRow("heading large", "pools", "Pools", "divPoolsRefresh", "2", () => refreshPoolsTable()),
                     el("div", { class: "divider" }),
 
                     // Pool list (default view).
                     el("div", { id: "divPoolsListPanel" }, [
-                        el("div", { class: "blocks-content scrollbar", style: "text-align: left; overflow: auto; max-height:470px; " + ADV_SCROLL_PAD, id: "divPoolsList", tabindex: "1" }, [
+                        el("div", { class: "blocks-content scrollbar", style: "text-align: left; overflow: auto; max-height:min(470px, calc(100vh - 330px)); " + ADV_SCROLL_PAD, id: "divPoolsList", tabindex: "1" }, [
                             el("div", { id: "divPoolsListError", class: "tx-steps-error", style: "display:none;" }),
                             el("table", { class: "styled-table" }, [
                                 el("thead", {}, [
@@ -235,7 +241,7 @@ function buildPoolsScreen(): HTMLElement {
                                 el("div", { id: "divPoolsPairWarn", class: "tx-steps-error", style: "display:none;" }),
                                 el("div", { id: "divCreatePairOfflineNotice", class: "tx-steps-error", style: "display:none;" }, ["Offline signing: pair existence may not be verified."]),
                             ]),
-                            actionButtonRow("btnPoolsCreatePair", "create-pair", "Create Pair", "15", onCreatePairClick),
+                            actionButtonRow("btnPoolsCreatePair", "create-pair", "Create Pair", "15", onCreatePairClick, "15px"),
                         ]),
                     ]),
                 ]),
@@ -249,7 +255,7 @@ function buildLiquidityScreen(): HTMLElement {
         el("div", { class: "center-content" }, [
             el("div", { class: "center-content-rounded-container", style: "margin-top:15px;" }, [
                 el("div", { class: "back-container", role: "button", tabindex: "40", onclick: () => { void onLiquidityBackClick(); } }),
-                el("div", { class: "roundex-box", style: "padding-top:15px; padding-bottom:15px;" }, [
+                el("div", { class: "roundex-box", "data-fluid-height": "true", style: "padding-top:15px; padding-bottom:15px;" }, [
                     el("div", {}, [
                         el("div", { class: "heading large", style: "float:left;width:fit-content;", "data-lang-key": "liquidity" }, ["Liquidity"]),
                     ]),
@@ -257,7 +263,7 @@ function buildLiquidityScreen(): HTMLElement {
 
                     // My positions (default view).
                     el("div", { id: "divLiquidityPositionsPanel" }, [
-                        el("div", { class: "blocks-content scrollbar", style: "text-align: left; overflow: auto; max-height:510px; " + ADV_SCROLL_PAD }, [
+                        el("div", { class: "blocks-content scrollbar", style: "text-align: left; overflow: auto; max-height:min(510px, calc(100vh - 330px)); " + ADV_SCROLL_PAD }, [
                             refreshHeaderRow("heading medium bold", "my-positions", "My Positions", "divLiquidityPositionsRefresh", "2", () => refreshLiquidityPositions()),
                             el("div", { id: "divLiquidityPositionsError", class: "tx-steps-error", style: "display:none;" }),
                             el("div", { id: "divLiquidityPositionsEmpty", style: "display:none;", "data-lang-key": "no-positions" }, ["You have no liquidity positions."]),
@@ -268,7 +274,7 @@ function buildLiquidityScreen(): HTMLElement {
                             el("a", { href: "#", "data-lang-key": "add-liquidity", tabindex: "1", onclick: (event: Event) => { event.preventDefault(); void showLiquidityAddPanel(null); } }, ["Add Liquidity"]),
                             el("span", { id: "linkLiquidityOfflineRemove", style: "display:none;" }, [
                                 " \u00a0 ",
-                                el("a", { href: "#", onclick: (event: Event) => { event.preventDefault(); showLiquidityOfflineRemovePanel(); } }, ["Remove Liquidity Offline"]),
+                                el("a", { href: "#", "data-lang-key": "remove-liquidity", onclick: (event: Event) => { event.preventDefault(); showLiquidityOfflineRemovePanel(); } }, ["Remove Liquidity"]),
                             ]),
                         ]),
                     ]),
@@ -281,7 +287,7 @@ function buildLiquidityScreen(): HTMLElement {
                                 el("img", { src: "assets/icons/loading.gif", alt: "Loading tokens", style: "width:30px; height:30px;" }),
                             ]),
                         ]),
-                        el("div", { class: "blocks-content scrollbar", style: "text-align: left; overflow: auto; " + ADV_SCROLL_PAD }, [
+                        el("div", { class: "blocks-content scrollbar", style: "text-align: left; overflow: auto; max-height: calc(100vh - 235px); " + ADV_SCROLL_PAD }, [
                             el("div", { class: "input_container" }, [
                                 el("div", { class: "heading medium", "data-lang-key": "token-a" }, ["Token A"]),
                                 tokenPicker("ddlLiquidityTokenA", "11", onLiquidityTokenChange),
@@ -298,8 +304,11 @@ function buildLiquidityScreen(): HTMLElement {
                                 el("div", { class: "divider" }),
                                 el("div", { id: "divLiquidityOfflineAddFields", style: "display:none;" }, [
                                     el("div", { class: "tx-steps-error" }, ["Offline signing: allowances and pair state may not be verified."]),
+                                    offlineFieldLabel("Deadline (Unix timestamp)"),
                                     el("input", { id: "txtLiquidityOfflineDeadline", class: "tab-name", style: ADV_INPUT_STYLE, type: "number", placeholder: "Deadline (Unix timestamp)" }),
+                                    offlineFieldLabel("Approval gas limit"),
                                     el("input", { id: "txtLiquidityOfflineApprovalGas", class: "tab-name", style: ADV_INPUT_STYLE, type: "number", value: "84000", placeholder: "Approval gas limit" }),
+                                    offlineFieldLabel("Add-liquidity gas limit"),
                                     el("input", { id: "txtLiquidityOfflineAddGas", class: "tab-name", style: ADV_INPUT_STYLE, type: "number", value: "600000", placeholder: "Add-liquidity gas limit" }),
                                 ]),
                                 el("div", { id: "divLiquidityFirstProviderWarn", style: "display:none;", "data-lang-key": "first-provider-warn" }, ["This pool is empty. You are the first liquidity provider: the ratio of the amounts you add sets the initial price of this pair."]),
@@ -312,7 +321,7 @@ function buildLiquidityScreen(): HTMLElement {
                     // Remove-liquidity panel (opened from a position card).
                     el("div", { id: "divLiquidityRemovePanel", style: "display:none;" }, [
                         el("div", { class: "heading bold", "data-lang-key": "remove-liquidity" }, ["Remove Liquidity"]),
-                        el("div", { class: "blocks-content scrollbar", style: "text-align: left; overflow: auto; max-height: calc(100vh - 260px); " + ADV_SCROLL_PAD }, [
+                        el("div", { class: "blocks-content scrollbar", style: "text-align: left; overflow: auto; max-height: calc(100vh - 235px); " + ADV_SCROLL_PAD }, [
                             el("div", { class: "input_container" }, [
                                 el("div", { class: "heading medium", id: "divLiquidityRemovePair" }),
                                 el("div", { class: "divider" }),
@@ -335,16 +344,27 @@ function buildLiquidityScreen(): HTMLElement {
                                 el("div", { id: "divLiquidityRemoveEstimates", style: "white-space:pre-line;" }),
                                 el("div", { class: "divider" }),
                                 el("div", { id: "divLiquidityOfflineRemoveFields", style: "display:none;" }, [
+                                    offlineFieldLabel("LP pair contract address"),
                                     el("input", { id: "txtLiquidityOfflinePairAddress", class: "tab-name", style: ADV_INPUT_STYLE, type: "text", placeholder: "LP pair contract address" }),
+                                    offlineFieldLabel("Token A contract"),
                                     el("input", { id: "txtLiquidityOfflineTokenA", class: "tab-name", style: ADV_INPUT_STYLE, type: "text", placeholder: "Token A contract" }),
+                                    offlineFieldLabel("Token B contract"),
                                     el("input", { id: "txtLiquidityOfflineTokenB", class: "tab-name", style: ADV_INPUT_STYLE, type: "text", placeholder: "Token B contract" }),
+                                    offlineFieldLabel("Token A decimals"),
                                     el("input", { id: "txtLiquidityOfflineDecimalsA", class: "tab-name", style: ADV_INPUT_STYLE, type: "number", value: "18", placeholder: "Token A decimals" }),
+                                    offlineFieldLabel("Token B decimals"),
                                     el("input", { id: "txtLiquidityOfflineDecimalsB", class: "tab-name", style: ADV_INPUT_STYLE, type: "number", value: "18", placeholder: "Token B decimals" }),
+                                    offlineFieldLabel("LP amount"),
                                     el("input", { id: "txtLiquidityOfflineLpAmount", class: "tab-name", style: ADV_INPUT_STYLE, type: "text", placeholder: "LP amount" }),
+                                    offlineFieldLabel("Minimum token A amount"),
                                     el("input", { id: "txtLiquidityOfflineMinA", class: "tab-name", style: ADV_INPUT_STYLE, type: "text", placeholder: "Minimum token A amount" }),
+                                    offlineFieldLabel("Minimum token B amount"),
                                     el("input", { id: "txtLiquidityOfflineMinB", class: "tab-name", style: ADV_INPUT_STYLE, type: "text", placeholder: "Minimum token B amount" }),
+                                    offlineFieldLabel("Deadline (Unix timestamp)"),
                                     el("input", { id: "txtLiquidityOfflineRemoveDeadline", class: "tab-name", style: ADV_INPUT_STYLE, type: "number", placeholder: "Deadline (Unix timestamp)" }),
+                                    offlineFieldLabel("LP approval gas limit"),
                                     el("input", { id: "txtLiquidityOfflineRemoveApprovalGas", class: "tab-name", style: ADV_INPUT_STYLE, type: "number", value: "84000", placeholder: "LP approval gas limit" }),
+                                    offlineFieldLabel("Remove-liquidity gas limit"),
                                     el("input", { id: "txtLiquidityOfflineRemoveGas", class: "tab-name", style: ADV_INPUT_STYLE, type: "number", value: "600000", placeholder: "Remove-liquidity gas limit" }),
                                 ]),
                                 el("div", { class: "heading medium", "data-lang-key": "slippage" }, ["Slippage %"]),
@@ -352,7 +372,7 @@ function buildLiquidityScreen(): HTMLElement {
                                 el("div", { class: "divider" }),
                                 el("div", { id: "divLiquidityRemoveError", class: "tx-steps-error", style: "display:none;" }),
                             ]),
-                            actionButtonRow("btnLiquidityRemove", "remove", "Remove", "32", onRemoveLiquidityClick),
+                            actionButtonRow("btnLiquidityRemove", "remove", "Remove", "32", onRemoveLiquidityClick, "15px"),
                         ]),
                     ]),
                 ]),
