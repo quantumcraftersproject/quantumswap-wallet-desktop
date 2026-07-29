@@ -22,12 +22,10 @@ jobs:
           mkdir -p ${{ github.workspace }}/download
           curl -k https://quantumcrafters.org/download/swap/1.2.6/QuantumSwapWallet-1.2.6-arm64.dmg --output ${{ github.workspace }}\download\QuantumSwapWallet-1.2.6-arm64.dmg
           curl -k https://quantumcrafters.org/download/swap/1.2.6/QuantumSwapWallet-1.2.6-x64.dmg --output ${{ github.workspace }}\download\QuantumSwapWallet-1.2.6-x64.dmg
-          curl -k https://quantumcrafters.org/download/swap/1.2.7/QuantumSwapWallet-1.2.7.Setup.exe --output ${{ github.workspace }}\download\QuantumSwapWallet-1.2.7.Setup.exe
       - name: Create Release
         run: |
           powershell Get-FileHash ${{ github.workspace }}\download\QuantumSwapWallet-1.2.6-arm64.dmg > ${{ github.workspace }}\download\QuantumSwapWallet-1.2.6-arm64.dmg.txt
           powershell Get-FileHash ${{ github.workspace }}\download\QuantumSwapWallet-1.2.6-x64.dmg > ${{ github.workspace }}\download\QuantumSwapWallet-1.2.6-x64.dmg.txt
-          powershell Get-FileHash ${{ github.workspace }}\download\QuantumSwapWallet-1.2.7.Setup.exe > ${{ github.workspace }}\download\QuantumSwapWallet-1.2.7.Setup.exe.txt
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@v4
         with:
